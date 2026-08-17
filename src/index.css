@@ -671,12 +671,40 @@ html, body {
   .print-only {
     display: block !important;
   }
-  .table-container {
-    border: 1px solid #000;
-    overflow: visible;
-  }
   .erp-table th, .erp-table td {
     border: 1px solid #ddd;
     color: #000;
   }
 }
+
+/* Strict Mobile Responsiveness & Touch Utilities */
+@media (max-width: 768px) {
+  html, body, #root {
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Safe Area Support */
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Touch Target & Input Sizing */
+  input, select, textarea, button {
+    font-size: 14px !important;
+    touch-action: manipulation;
+  }
+
+  /* Tables horizontal smooth scroll */
+  ::-webkit-scrollbar {
+    height: 4px;
+    width: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
+  }
+}
+

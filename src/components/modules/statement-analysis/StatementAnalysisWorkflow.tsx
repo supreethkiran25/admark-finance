@@ -40,6 +40,7 @@ import { SelectPicker } from '../../common/SelectPicker';
 import { Modal } from '../../common/Modal';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
+import { useIsMobile } from '../../../utils/useIsMobile';
 import { ExpenseCategory, ImportedReviewTransaction } from '../../../types/finance';
 import { colors } from '../../../theme/colors';
 
@@ -74,6 +75,7 @@ export const StatementAnalysisWorkflow: React.FC = () => {
     setActiveModule,
   } = useFinance();
 
+  const isMobile = useIsMobile(768);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Upload Form State
@@ -82,7 +84,8 @@ export const StatementAnalysisWorkflow: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [uploadFormat, setUploadFormat] = useState<'PDF' | 'CSV' | 'Excel'>('PDF');
 
-  // Split-Screen & Comparison Controls
+  // Split-Screen & Comparison Controls (on mobile, default to table with tab switcher)
+  const [mobileActiveTab, setMobileActiveTab] = useState<'table' | 'document'>('table');
   const [splitViewMode, setSplitViewMode] = useState<'split' | 'full-table' | 'full-document'>('split');
   const [selectedDocPage, setSelectedDocPage] = useState<number>(1);
   const [rawTextInspector, setRawTextInspector] = useState<boolean>(false);
@@ -335,7 +338,7 @@ export const StatementAnalysisWorkflow: React.FC = () => {
 
       {/* MAIN CONTENT WORKSPACE: UPLOAD or SPLIT SCREEN */}
       {pendingReviewTransactions.length === 0 ? (
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 14 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: isMobile ? 10 : 16, gap: 14 }}>
           {/* UPLOAD FORM */}
           <View style={styles.uploadCard}>
             <View style={styles.cardHeader}>
@@ -349,7 +352,7 @@ export const StatementAnalysisWorkflow: React.FC = () => {
             </View>
 
             {/* Format Selection Tabs */}
-            <View style={styles.formatTabs}>
+            <View style={[styles.formatTabs, isMobile && { flexDirection: 'column' }]}>
               <TouchableOpacity
                 style={[styles.formatTab, uploadFormat === 'PDF' && styles.formatTabActive]}
                 onPress={() => setUploadFormat('PDF')}
@@ -425,7 +428,7 @@ export const StatementAnalysisWorkflow: React.FC = () => {
                     <Lock size={13} color={colors.pendingText} />
                     <Text style={styles.passwordLabel}>PDF Statement Password (if encrypted):</Text>
                   </View>
-                  <Text style={styles.passwordHint}>Company PAN (in UPPERCASE) or NetBanking Customer ID</Text>
+                  <Text style={styles.passwordHint}>Company PAN or NetBanking ID</Text>
                 </View>
 
                 <View style={styles.passwordInputBox}>
@@ -474,11 +477,34 @@ export const StatementAnalysisWorkflow: React.FC = () => {
           </View>
         </ScrollView>
       ) : (
-        /* SPLIT-SCREEN SIDE-BY-SIDE COMPARISON WORKSPACE */
-        <View style={styles.splitWorkspace}>
+        /* SPLIT-SCREEN / RESPONSIVE WORKSPACE */
+        <View style={[styles.splitWorkspace, isMobile && styles.splitWorkspaceMobile]}>
+          {/* Mobile Tab Switcher */}
+          {isMobile && (
+            <View style={styles.mobileTabRow}>
+              <TouchableOpacity
+                style={[styles.mobileTabBtn, mobileActiveTab === 'table' && styles.mobileTabBtnActive]}
+                onPress={() => setMobileActiveTab('table')}
+              >
+                <Text style={[styles.mobileTabBtnText, mobileActiveTab === 'table' && styles.mobileTabBtnTextActive]}>
+                  Extracted Rows ({pendingReviewTransactions.length})
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.mobileTabBtn, mobileActiveTab === 'document' && styles.mobileTabBtnActive]}
+                onPress={() => setMobileActiveTab('document')}
+              >
+                <Text style={[styles.mobileTabBtnText, mobileActiveTab === 'document' && styles.mobileTabBtnTextActive]}>
+                  Original Statement
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* LEFT PANEL: ORIGINAL STATEMENT VIEWER */}
-          {splitViewMode === 'split' && (
-            <View style={styles.leftDocPanel}>
+          {(!isMobile ? splitViewMode === 'split' : mobileActiveTab === 'document') && (
+            <View style={[styles.leftDocPanel, isMobile && { width: '100%', borderRightWidth: 0, flex: 1 }]}>
               <View style={styles.docPanelHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <FileText size={14} color={colors.primaryNavy} />
@@ -497,7 +523,7 @@ export const StatementAnalysisWorkflow: React.FC = () => {
                 </View>
               </View>
 
-              {/* Document Display (Embedded PDF or Text Inspector) */}
+              {/* Document Display */}
               <View style={styles.docViewerContainer}>
                 {rawTextInspector || !activeStatement?.fileDataUrl?.startsWith('data:application/pdf') ? (
                   <ScrollView style={styles.rawTextContainer} contentContainerStyle={{ padding: 12 }}>
@@ -526,207 +552,207 @@ export const StatementAnalysisWorkflow: React.FC = () => {
             </View>
           )}
 
-          {/* RIGHT PANEL: EXTRACTED TRANSACTIONS & MANUAL CORRECTION TABLE */}
-          <View style={[styles.rightTablePanel, splitViewMode === 'full-table' && { width: '100%' }]}>
-            {/* Filter Bar */}
-            <View style={styles.tableFilterBar}>
-              <View style={styles.searchBox}>
-                <Search size={13} color={colors.textMuted} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search extracted transactions, reference #, or amounts..."
-                  placeholderTextColor={colors.textMuted}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
+          {/* RIGHT PANEL: EXTRACTED TRANSACTIONS TABLE */}
+          {(!isMobile ? true : mobileActiveTab === 'table') && (
+            <View style={[styles.rightTablePanel, (splitViewMode === 'full-table' || isMobile) && { width: '100%' }]}>
+              {/* Filter Bar */}
+              <View style={[styles.tableFilterBar, isMobile && { flexDirection: 'column', alignItems: 'stretch' }]}>
+                <View style={styles.searchBox}>
+                  <Search size={13} color={colors.textMuted} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search extracted transactions, reference #, or amounts..."
+                    placeholderTextColor={colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+
+                <SelectPicker
+                  label="Category"
+                  value={selectedCategoryFilter}
+                  options={['All', ...CATEGORIES]}
+                  onChange={setSelectedCategoryFilter}
+                  style={{ minWidth: 150 }}
                 />
               </View>
 
-              <SelectPicker
-                label="Category"
-                value={selectedCategoryFilter}
-                options={['All', ...CATEGORIES]}
-                onChange={setSelectedCategoryFilter}
-                style={{ minWidth: 150 }}
-              />
-            </View>
-
-            {/* Bulk Selection Ribbon */}
-            {selectedIds.length > 0 && (
-              <View style={styles.bulkBar}>
-                <Text style={styles.bulkCountText}>{selectedIds.length} items selected</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <SelectPicker
-                    value={batchCategory}
-                    options={CATEGORIES}
-                    onChange={(v: any) => setBatchCategory(v)}
-                    style={{ minWidth: 140 }}
-                  />
-                  <TouchableOpacity
-                    style={styles.batchBtn}
-                    onPress={() => {
-                      batchChangeReviewCategory(selectedIds, batchCategory);
-                      setSelectedIds([]);
-                    }}
-                  >
-                    <Text style={styles.batchBtnText}>Apply</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.batchDeleteBtn}
-                    onPress={() => {
-                      if (confirm(`Remove ${selectedIds.length} items from review?`)) {
-                        selectedIds.forEach(id => deleteReviewTransaction(id));
+              {/* Bulk Selection Ribbon */}
+              {selectedIds.length > 0 && (
+                <View style={styles.bulkBar}>
+                  <Text style={styles.bulkCountText}>{selectedIds.length} items selected</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <SelectPicker
+                      value={batchCategory}
+                      options={CATEGORIES}
+                      onChange={(v: any) => setBatchCategory(v)}
+                      style={{ minWidth: 140 }}
+                    />
+                    <TouchableOpacity
+                      style={styles.batchBtn}
+                      onPress={() => {
+                        batchChangeReviewCategory(selectedIds, batchCategory);
                         setSelectedIds([]);
-                      }
-                    }}
-                  >
-                    <Trash2 size={11} color={colors.debitText} />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {/* Extracted Transactions Table */}
-            <ScrollView style={styles.tableScrollView}>
-              <View style={styles.table}>
-                <View style={[styles.tableRow, styles.tableHeader]}>
-                  <TouchableOpacity onPress={toggleSelectAll} style={{ width: 24 }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700' }}>
-                      {selectedIds.length === filteredReviewItems.length && filteredReviewItems.length > 0 ? '☑' : '☐'}
-                    </Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.cell, { flex: 1.0, fontWeight: '700' }]}>Date</Text>
-                  <Text style={[styles.cell, { flex: 2.8, fontWeight: '700' }]}>Description / Narration</Text>
-                  <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Debit (₹)</Text>
-                  <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Credit (₹)</Text>
-                  <Text style={[styles.cell, { flex: 2.0, fontWeight: '700' }]}>Category (Dropdown)</Text>
-                  <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
-                </View>
-
-                {filteredReviewItems.length === 0 ? (
-                  <View style={styles.emptyTable}>
-                    <Text style={{ fontSize: 12, color: colors.textMuted }}>No matching transactions found.</Text>
+                      }}
+                    >
+                      <Text style={styles.batchBtnText}>Apply</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.batchDeleteBtn}
+                      onPress={() => {
+                        if (confirm(`Remove ${selectedIds.length} items from review?`)) {
+                          selectedIds.forEach(id => deleteReviewTransaction(id));
+                          setSelectedIds([]);
+                        }
+                      }}
+                    >
+                      <Trash2 size={11} color={colors.debitText} />
+                    </TouchableOpacity>
                   </View>
-                ) : (
-                  filteredReviewItems.map(item => {
-                    const isSelected = selectedIds.includes(item.id);
-                    const hasError = item.status === 'Needs Verification';
+                </View>
+              )}
 
-                    return (
-                      <View
-                        key={item.id}
-                        style={[
-                          styles.tableRow,
-                          isSelected && { backgroundColor: '#f0f7ff' },
-                          hasError && { backgroundColor: '#fff7ed', borderLeftWidth: 3, borderLeftColor: colors.pendingText },
-                          item.isCustomCategory && { borderLeftWidth: 3, borderLeftColor: colors.primaryNavy },
-                        ]}
-                      >
-                        <TouchableOpacity onPress={() => toggleSelectOne(item.id)} style={{ width: 24 }}>
-                          <Text style={{ fontSize: 11, color: colors.textSecondary }}>
-                            {isSelected ? '☑' : '☐'}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <Text style={[styles.cell, styles.monoText, { flex: 1.0 }]}>{formatDate(item.date)}</Text>
-
-                        <View style={{ flex: 2.8 }}>
-                          <Text style={[styles.cell, { fontWeight: '700' }]} numberOfLines={1}>
-                            {item.merchant}
-                          </Text>
-                          <Text style={[styles.monoText, { fontSize: 9.5, color: colors.textMuted }]} numberOfLines={1}>
-                            {item.description}
-                          </Text>
-                          {item.referenceNumber && (
-                            <Text style={[styles.monoText, { fontSize: 8.5, color: colors.textSecondary }]}>
-                              Ref: {item.referenceNumber}
-                            </Text>
-                          )}
-                          {hasError && item.validationErrors && (
-                            <View style={styles.errorChip}>
-                              <AlertTriangle size={10} color={colors.pendingText} />
-                              <Text style={styles.errorChipText}>{item.validationErrors.join(', ')}</Text>
-                            </View>
-                          )}
-                        </View>
-
-                        {/* Exact Unrounded Debit Amount */}
-                        <Text
-                          style={[
-                            styles.cell,
-                            styles.monoText,
-                            { flex: 1.4, textAlign: 'right', fontWeight: '700', color: item.debitAmount > 0 ? colors.debitText : colors.textMuted },
-                          ]}
-                        >
-                          {item.debitAmount > 0 ? formatCurrency(item.debitAmount) : '—'}
+              {/* Extracted Transactions Table with Horizontal Scroll for Mobile */}
+              <ScrollView horizontal style={{ width: '100%', flex: 1 }}>
+                <ScrollView style={[styles.tableScrollView, { minWidth: isMobile ? 720 : '100%' }]}>
+                  <View style={styles.table}>
+                    <View style={[styles.tableRow, styles.tableHeader]}>
+                      <TouchableOpacity onPress={toggleSelectAll} style={{ width: 24 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700' }}>
+                          {selectedIds.length === filteredReviewItems.length && filteredReviewItems.length > 0 ? '☑' : '☐'}
                         </Text>
+                      </TouchableOpacity>
+                      <Text style={[styles.cell, { flex: 1.0, fontWeight: '700' }]}>Date</Text>
+                      <Text style={[styles.cell, { flex: 2.8, fontWeight: '700' }]}>Description / Narration</Text>
+                      <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Debit (₹)</Text>
+                      <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Credit (₹)</Text>
+                      <Text style={[styles.cell, { flex: 2.0, fontWeight: '700' }]}>Category (Dropdown)</Text>
+                      <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
+                    </View>
 
-                        {/* Exact Unrounded Credit Amount */}
-                        <Text
-                          style={[
-                            styles.cell,
-                            styles.monoText,
-                            { flex: 1.4, textAlign: 'right', fontWeight: '700', color: item.creditAmount > 0 ? colors.creditText : colors.textMuted },
-                          ]}
-                        >
-                          {item.creditAmount > 0 ? `+${formatCurrency(item.creditAmount)}` : '—'}
-                        </Text>
-
-                        {/* Inline Category SelectPicker */}
-                        <View style={{ flex: 2.0 }}>
-                          <SelectPicker
-                            value={item.selectedCategory}
-                            options={CATEGORIES}
-                            onChange={(val: any) => updateReviewCategory(item.id, val)}
-                          />
-                        </View>
-
-                        {/* Actions (Edit modal & Delete) */}
-                        <View style={{ flex: 1.0, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-                          <TouchableOpacity
-                            style={styles.iconBtn}
-                            onPress={() => openManualEditModal(item)}
-                            accessibilityLabel="Edit transaction fields"
-                          >
-                            <Edit3 size={11} color={colors.textSecondary} />
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
-                            onPress={() => deleteReviewTransaction(item.id)}
-                            accessibilityLabel="Delete item"
-                          >
-                            <Trash2 size={11} color={colors.debitText} />
-                          </TouchableOpacity>
-                        </View>
+                    {filteredReviewItems.length === 0 ? (
+                      <View style={styles.emptyTable}>
+                        <Text style={{ fontSize: 12, color: colors.textMuted }}>No matching transactions found.</Text>
                       </View>
-                    );
-                  })
-                )}
-              </View>
-            </ScrollView>
+                    ) : (
+                      filteredReviewItems.map(item => {
+                        const isSelected = selectedIds.includes(item.id);
+                        const hasError = item.status === 'Needs Verification';
 
-            {/* Bottom Save Action Ribbon */}
-            <View style={styles.bottomSaveRibbon}>
-              <View>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textPrimary }}>
-                  100% Data Verified Against Statement
-                </Text>
-                <Text style={{ fontSize: 10, color: colors.textMuted }}>
-                  Total Debits: {formatCurrency(totalDebits)} • Total Credits: {formatCurrency(totalCredits)}
-                </Text>
-              </View>
+                        return (
+                          <View
+                            key={item.id}
+                            style={[
+                              styles.tableRow,
+                              isSelected && { backgroundColor: '#f0f7ff' },
+                              hasError && { backgroundColor: '#fff7ed', borderLeftWidth: 3, borderLeftColor: colors.pendingText },
+                              item.isCustomCategory && { borderLeftWidth: 3, borderLeftColor: colors.primaryNavy },
+                            ]}
+                          >
+                            <TouchableOpacity onPress={() => toggleSelectOne(item.id)} style={{ width: 24 }}>
+                              <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                                {isSelected ? '☑' : '☐'}
+                              </Text>
+                            </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.saveAllBtnLarge}
-                onPress={approveAndSaveAllReviewTransactions}
-              >
-                <Save size={14} color="#fff" />
-                <Text style={styles.saveAllBtnLargeText}>
-                  Approve & Save All {pendingReviewTransactions.length} Verified Transactions
-                </Text>
-              </TouchableOpacity>
+                            <Text style={[styles.cell, styles.monoText, { flex: 1.0 }]}>{formatDate(item.date)}</Text>
+
+                            <View style={{ flex: 2.8 }}>
+                              <Text style={[styles.cell, { fontWeight: '700' }]} numberOfLines={1}>
+                                {item.merchant}
+                              </Text>
+                              <Text style={[styles.monoText, { fontSize: 9.5, color: colors.textMuted }]} numberOfLines={1}>
+                                {item.description}
+                              </Text>
+                              {item.referenceNumber && (
+                                <Text style={[styles.monoText, { fontSize: 8.5, color: colors.textSecondary }]}>
+                                  Ref: {item.referenceNumber}
+                                </Text>
+                              )}
+                              {hasError && item.validationErrors && (
+                                <View style={styles.errorChip}>
+                                  <AlertTriangle size={10} color={colors.pendingText} />
+                                  <Text style={styles.errorChipText}>{item.validationErrors.join(', ')}</Text>
+                                </View>
+                              )}
+                            </View>
+
+                            <Text
+                              style={[
+                                styles.cell,
+                                styles.monoText,
+                                { flex: 1.4, textAlign: 'right', fontWeight: '700', color: item.debitAmount > 0 ? colors.debitText : colors.textMuted },
+                              ]}
+                            >
+                              {item.debitAmount > 0 ? formatCurrency(item.debitAmount) : '—'}
+                            </Text>
+
+                            <Text
+                              style={[
+                                styles.cell,
+                                styles.monoText,
+                                { flex: 1.4, textAlign: 'right', fontWeight: '700', color: item.creditAmount > 0 ? colors.creditText : colors.textMuted },
+                              ]}
+                            >
+                              {item.creditAmount > 0 ? `+${formatCurrency(item.creditAmount)}` : '—'}
+                            </Text>
+
+                            <View style={{ flex: 2.0 }}>
+                              <SelectPicker
+                                value={item.selectedCategory}
+                                options={CATEGORIES}
+                                onChange={(val: any) => updateReviewCategory(item.id, val)}
+                              />
+                            </View>
+
+                            <View style={{ flex: 1.0, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                              <TouchableOpacity
+                                style={styles.iconBtn}
+                                onPress={() => openManualEditModal(item)}
+                                accessibilityLabel="Edit transaction fields"
+                              >
+                                <Edit3 size={11} color={colors.textSecondary} />
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
+                                onPress={() => deleteReviewTransaction(item.id)}
+                                accessibilityLabel="Delete item"
+                              >
+                                <Trash2 size={11} color={colors.debitText} />
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })
+                    )}
+                  </View>
+                </ScrollView>
+              </ScrollView>
+
+              {/* Bottom Save Action Ribbon */}
+              <View style={[styles.bottomSaveRibbon, isMobile && { flexDirection: 'column', gap: 6, alignItems: 'stretch' }]}>
+                <View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textPrimary }}>
+                    100% Data Verified Against Statement
+                  </Text>
+                  <Text style={{ fontSize: 10, color: colors.textMuted }}>
+                    Debits: {formatCurrency(totalDebits)} • Credits: {formatCurrency(totalCredits)}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.saveAllBtnLarge}
+                  onPress={approveAndSaveAllReviewTransactions}
+                >
+                  <Save size={14} color="#fff" />
+                  <Text style={styles.saveAllBtnLargeText}>
+                    Approve & Save All {pendingReviewTransactions.length} Verified Rows
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
         </View>
       )}
 
@@ -1111,6 +1137,36 @@ const styles = StyleSheet.create<any>({
     flex: 1,
     flexDirection: 'row',
     height: 'calc(100% - 90px)' as any,
+  },
+  splitWorkspaceMobile: {
+    flexDirection: 'column',
+    height: '100%',
+  },
+  mobileTabRow: {
+    flexDirection: 'row',
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  mobileTabBtn: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileTabBtnActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primaryNavy,
+    backgroundColor: colors.bgSurface,
+  },
+  mobileTabBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  mobileTabBtnTextActive: {
+    color: colors.primaryNavy,
+    fontWeight: '700',
   },
   leftDocPanel: {
     width: '45%',

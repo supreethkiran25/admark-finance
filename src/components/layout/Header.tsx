@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import {
   Search,
@@ -8,10 +8,10 @@ import {
   Clock,
   Menu,
   Plus,
-  RotateCcw,
 } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { useAuth } from '../../context/AuthContext';
+import { useIsMobile } from '../../utils/useIsMobile';
 import { colors } from '../../theme/colors';
 
 export const Header: React.FC = () => {
@@ -22,10 +22,10 @@ export const Header: React.FC = () => {
     setGlobalSearchQuery,
     isSidebarCollapsed,
     setIsSidebarCollapsed,
-    clearAllData,
   } = useFinance();
 
   const { user, logout, timeUntilLogout, extendSession } = useAuth();
+  const isMobile = useIsMobile(768);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -41,65 +41,78 @@ export const Header: React.FC = () => {
   };
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, isMobile && styles.headerMobile]}>
       {/* Left Area: Logo & Collapse Button */}
       <View style={styles.leftGroup}>
         <TouchableOpacity
           style={styles.menuBtn}
           onPress={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          accessibilityLabel="Toggle Navigation Menu"
         >
-          <Menu size={14} color={colors.textSecondary} />
+          <Menu size={16} color={colors.textPrimary} />
         </TouchableOpacity>
 
-        <View style={styles.brandingBox}>
+        <TouchableOpacity
+          style={styles.brandingBox}
+          onPress={() => setActiveModule('dashboard')}
+        >
           <Text style={styles.brandTitle}>ADMARK</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>CFO PORTAL</Text>
-          </View>
-        </View>
+          {!isMobile && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>CFO</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Center Area: Global Search Everything */}
-      <View style={styles.centerGroup}>
-        <View style={styles.searchContainer}>
-          <Search size={13} color={colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search expenses, transactions, suppliers, or reports..."
-            placeholderTextColor={colors.textMuted}
-            value={globalSearchQuery}
-            onChangeText={handleGlobalSearch}
-          />
-          {globalSearchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setGlobalSearchQuery('')}>
-              <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '700' }}>✕</Text>
-            </TouchableOpacity>
-          )}
+      {!isMobile && (
+        <View style={styles.centerGroup}>
+          <View style={styles.searchContainer}>
+            <Search size={13} color={colors.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search expenses, transactions, suppliers, or reports..."
+              placeholderTextColor={colors.textMuted}
+              value={globalSearchQuery}
+              onChangeText={handleGlobalSearch}
+            />
+            {globalSearchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setGlobalSearchQuery('')}>
+                <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: '700' }}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Right Area: Session Timer, Quick Actions, Profile & Logout */}
       <View style={styles.rightGroup}>
-        <TouchableOpacity
-          style={styles.quickUploadBtn}
-          onPress={() => setActiveModule('upload-statement')}
-        >
-          <Upload size={12} color="#fff" />
-          <Text style={styles.quickUploadBtnText}>Upload Statement</Text>
-        </TouchableOpacity>
+        {!isMobile && (
+          <>
+            <TouchableOpacity
+              style={styles.quickUploadBtn}
+              onPress={() => setActiveModule('upload-statement')}
+            >
+              <Upload size={12} color="#fff" />
+              <Text style={styles.quickUploadBtnText}>Upload Statement</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.quickAddBtn}
-          onPress={() => setActiveModule('expenses')}
-        >
-          <Plus size={12} color={colors.textPrimary} />
-          <Text style={styles.quickAddBtnText}>+ Expense</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.quickAddBtn}
+              onPress={() => setActiveModule('expenses')}
+            >
+              <Plus size={12} color={colors.textPrimary} />
+              <Text style={styles.quickAddBtnText}>+ Expense</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* Inactivity Session Timer */}
         <TouchableOpacity
           style={styles.timerBadge}
           onPress={extendSession}
+          accessibilityLabel="Session countdown timer"
         >
           <Clock size={11} color={timeUntilLogout < 120 ? colors.debitText : colors.textMuted} />
           <Text
@@ -113,15 +126,17 @@ export const Header: React.FC = () => {
         </TouchableOpacity>
 
         {/* Profile Info */}
-        <View style={styles.profileBox}>
-          <View style={styles.avatar}>
-            <User size={12} color="#fff" />
+        {!isMobile && (
+          <View style={styles.profileBox}>
+            <View style={styles.avatar}>
+              <User size={12} color="#fff" />
+            </View>
+            <View>
+              <Text style={styles.profileName}>CFO</Text>
+              <Text style={styles.profileEmail}>{user?.email || 'cfo@agency.internal'}</Text>
+            </View>
           </View>
-          <View>
-            <Text style={styles.profileName}>CFO</Text>
-            <Text style={styles.profileEmail}>{user?.email || 'cfo@agency.internal'}</Text>
-          </View>
-        </View>
+        )}
 
         {/* Logout */}
         <TouchableOpacity
@@ -131,9 +146,10 @@ export const Header: React.FC = () => {
               logout();
             }
           }}
+          accessibilityLabel="Sign out"
         >
-          <LogOut size={12} color={colors.debitText} />
-          <Text style={styles.logoutBtnText}>Logout</Text>
+          <LogOut size={13} color={colors.debitText} />
+          {!isMobile && <Text style={styles.logoutBtnText}>Logout</Text>}
         </TouchableOpacity>
       </View>
     </View>
@@ -150,7 +166,11 @@ const styles = StyleSheet.create<any>({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    zIndex: 100,
+    zIndex: 50,
+  },
+  headerMobile: {
+    height: 44,
+    paddingHorizontal: 8,
   },
   leftGroup: {
     flexDirection: 'row',
@@ -158,35 +178,31 @@ const styles = StyleSheet.create<any>({
     gap: 8,
   },
   menuBtn: {
-    padding: 5,
+    padding: 6,
     borderRadius: 3,
     backgroundColor: colors.bgSurfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
   },
   brandingBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   brandTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: colors.primaryNavy,
+    fontSize: 13.5,
+    fontWeight: '900',
     letterSpacing: 0.5,
+    color: colors.primaryNavy,
   },
   badge: {
-    paddingHorizontal: 5,
+    backgroundColor: colors.primaryNavy,
+    paddingHorizontal: 4,
     paddingVertical: 1,
-    backgroundColor: colors.bgSurfaceAlt,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     borderRadius: 2,
   },
   badgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: colors.textSecondary,
+    color: '#fff',
+    fontSize: 8,
+    fontWeight: '800',
   },
   centerGroup: {
     flex: 1,
@@ -202,13 +218,13 @@ const styles = StyleSheet.create<any>({
     borderRadius: 3,
     paddingHorizontal: 8,
     height: 28,
-    gap: 6,
   },
   searchInput: {
     flex: 1,
     fontSize: 11,
     color: colors.textPrimary,
-    outlineStyle: 'none' as any,
+    marginLeft: 6,
+    height: '100%',
   },
   rightGroup: {
     flexDirection: 'row',
@@ -222,7 +238,7 @@ const styles = StyleSheet.create<any>({
     backgroundColor: colors.primaryNavy,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   quickUploadBtnText: {
     color: '#fff',
@@ -232,13 +248,13 @@ const styles = StyleSheet.create<any>({
   quickAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
     backgroundColor: colors.bgSurfaceAlt,
     borderWidth: 1,
     borderColor: colors.borderDefault,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   quickAddBtnText: {
     color: colors.textPrimary,
@@ -249,24 +265,24 @@ const styles = StyleSheet.create<any>({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
     backgroundColor: colors.bgSurfaceAlt,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    borderRadius: 3,
     borderWidth: 1,
-    borderColor: colors.borderDefault,
-    borderRadius: 2,
+    borderColor: colors.borderSubtle,
   },
   timerText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontFamily: 'Roboto Mono, monospace',
-    color: colors.textSecondary,
-    fontWeight: '600',
+    color: colors.textMuted,
   },
   profileBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingLeft: 4,
+    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderLeftWidth: 1,
     borderLeftColor: colors.borderSubtle,
   },
@@ -279,30 +295,26 @@ const styles = StyleSheet.create<any>({
     justifyContent: 'center',
   },
   profileName: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
     color: colors.textPrimary,
-    lineHeight: 11,
   },
   profileEmail: {
     fontSize: 8.5,
     color: colors.textMuted,
-    lineHeight: 9,
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     paddingHorizontal: 6,
-    paddingVertical: 3,
+    paddingVertical: 4,
     backgroundColor: colors.debitBg,
-    borderWidth: 1,
-    borderColor: colors.debitBorder,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   logoutBtnText: {
-    fontSize: 10,
-    color: colors.debitText,
+    fontSize: 10.5,
     fontWeight: '700',
+    color: colors.debitText,
   },
 });

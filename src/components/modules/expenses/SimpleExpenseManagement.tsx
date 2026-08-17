@@ -249,78 +249,80 @@ export const SimpleExpenseManagement: React.FC = () => {
       </View>
 
       {/* Expenses Table */}
-      <View style={styles.table}>
-        <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Ref #</Text>
-          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Date</Text>
-          <Text style={[styles.cell, { flex: 3.2, fontWeight: '700' }]}>Description</Text>
-          <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Category</Text>
-          <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>Amount (₹)</Text>
-          <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Receipt</Text>
-          <Text style={[styles.cell, { flex: 1.2, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
-        </View>
-
-        {filteredExpenses.length === 0 ? (
-          <View style={styles.emptyTable}>
-            <Receipt size={28} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No Expenses Recorded</Text>
-            <Text style={styles.emptySub}>
-              Click "+ Add Expense" above or upload a bank statement to record your expenses.
-            </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+        <View style={[styles.table, { minWidth: 680 }]}>
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Ref #</Text>
+            <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Date</Text>
+            <Text style={[styles.cell, { flex: 3.2, fontWeight: '700' }]}>Description</Text>
+            <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Category</Text>
+            <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>Amount (₹)</Text>
+            <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Receipt</Text>
+            <Text style={[styles.cell, { flex: 1.2, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
           </View>
-        ) : (
-          filteredExpenses.map(exp => (
-            <View key={exp.id} style={styles.tableRow}>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.1, color: colors.textMuted }]}>
-                {exp.referenceNumber}
-              </Text>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(exp.date)}</Text>
-              <Text style={[styles.cell, { flex: 3.2, fontWeight: '600' }]} numberOfLines={1}>
-                {exp.description}
-              </Text>
-              <Text style={[styles.cell, { flex: 1.8, color: colors.textSecondary }]}>{exp.category}</Text>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right', fontWeight: '700', color: colors.debitText }]}>
-                {formatCurrency(exp.amount)}
-              </Text>
 
-              {/* Receipt View Button */}
-              <View style={{ flex: 1.0, alignItems: 'center' }}>
-                {exp.receiptDataUrl ? (
-                  <TouchableOpacity
-                    style={styles.receiptChip}
-                    onPress={() => setPreviewReceipt(exp)}
-                  >
-                    <Paperclip size={10} color={colors.primaryNavy} />
-                    <Text style={styles.receiptChipText}>View</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={{ fontSize: 10, color: colors.textMuted }}>—</Text>
-                )}
-              </View>
-
-              {/* Actions */}
-              <View style={{ flex: 1.2, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={() => openEditModal(exp)}
-                >
-                  <Edit3 size={11} color={colors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
-                  onPress={() => {
-                    if (confirm(`Delete expense ${exp.referenceNumber} (${exp.description})?`)) {
-                      deleteExpense(exp.id);
-                    }
-                  }}
-                >
-                  <Trash2 size={11} color={colors.debitText} />
-                </TouchableOpacity>
-              </View>
+          {filteredExpenses.length === 0 ? (
+            <View style={styles.emptyTable}>
+              <Receipt size={28} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Expenses Recorded</Text>
+              <Text style={styles.emptySub}>
+                Click "+ Add Expense" above or upload a bank statement to record your expenses.
+              </Text>
             </View>
-          ))
-        )}
-      </View>
+          ) : (
+            filteredExpenses.map(exp => (
+              <View key={exp.id} style={styles.tableRow}>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.1, color: colors.textMuted }]}>
+                  {exp.referenceNumber}
+                </Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(exp.date)}</Text>
+                <Text style={[styles.cell, { flex: 3.2, fontWeight: '600' }]} numberOfLines={1}>
+                  {exp.description}
+                </Text>
+                <Text style={[styles.cell, { flex: 1.8, color: colors.textSecondary }]}>{exp.category}</Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right', fontWeight: '700', color: colors.debitText }]}>
+                  {formatCurrency(exp.amount)}
+                </Text>
+
+                {/* Receipt View Button */}
+                <View style={{ flex: 1.0, alignItems: 'center' }}>
+                  {exp.receiptDataUrl ? (
+                    <TouchableOpacity
+                      style={styles.receiptChip}
+                      onPress={() => setPreviewReceipt(exp)}
+                    >
+                      <Paperclip size={10} color={colors.primaryNavy} />
+                      <Text style={styles.receiptChipText}>View</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <Text style={{ fontSize: 10, color: colors.textMuted }}>—</Text>
+                  )}
+                </View>
+
+                {/* Actions */}
+                <View style={{ flex: 1.2, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                  <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={() => openEditModal(exp)}
+                  >
+                    <Edit3 size={11} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
+                    onPress={() => {
+                      if (confirm(`Delete expense ${exp.referenceNumber} (${exp.description})?`)) {
+                        deleteExpense(exp.id);
+                      }
+                    }}
+                  >
+                    <Trash2 size={11} color={colors.debitText} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
 
       {/* SIMPLIFIED EXPENSE MODAL (Date, Category, Description, Amount, Receipt) */}
       <Modal

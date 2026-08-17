@@ -130,45 +130,48 @@ export const SimpleReportsView: React.FC = () => {
       <View style={styles.tableCard}>
         <Text style={styles.tableTitle}>Category Spending Breakdown</Text>
 
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.cell, { flex: 2.5, fontWeight: '700' }]}>Category</Text>
-            <Text style={[styles.cell, { flex: 1.2, textAlign: 'center', fontWeight: '700' }]}>Transactions</Text>
-            <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Total Spent (₹)</Text>
-            <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>% of Total</Text>
-            <Text style={[styles.cell, { flex: 3.0, fontWeight: '700' }]}>Share</Text>
-          </View>
-
-          {categoryStats.length === 0 ? (
-            <View style={styles.emptyTable}>
-              <PieChart size={28} color={colors.textMuted} />
-              <Text style={styles.emptyTitle}>No Spending Data to Report</Text>
-              <Text style={styles.emptySub}>
-                Upload a bank statement or record expenses to generate automated spending reports.
-              </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+          <View style={[styles.table, { minWidth: 620 }]}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.cell, { flex: 2.5, fontWeight: '700' }]}>Category</Text>
+              <Text style={[styles.cell, { flex: 1.2, textAlign: 'center', fontWeight: '700' }]}>Transactions</Text>
+              <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Total Spent (₹)</Text>
+              <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>% of Total</Text>
+              <Text style={[styles.cell, { flex: 3.0, fontWeight: '700' }]}>Share</Text>
             </View>
-          ) : (
-            categoryStats.map(stat => (
-              <View key={stat.category} style={styles.tableRow}>
-                <Text style={[styles.cell, { flex: 2.5, fontWeight: '600' }]}>{stat.category}</Text>
-                <Text style={[styles.cell, styles.monoText, { flex: 1.2, textAlign: 'center' }]}>
-                  {stat.count}
-                </Text>
-                <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>
-                  {formatCurrency(stat.amount)}
-                </Text>
-                <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right' }]}>
-                  {stat.pct.toFixed(1)}%
-                </Text>
-                <View style={{ flex: 3.0, paddingLeft: 8 }}>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { width: `${stat.pct}%` }]} />
+
+            {categoryStats.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>No spending recorded yet.</Text>
+              </View>
+            ) : (
+              categoryStats.map(stat => (
+                <View key={stat.category} style={styles.tableRow}>
+                  <Text style={[styles.cell, { flex: 2.5, fontWeight: '600' }]}>{stat.category}</Text>
+                  <Text style={[styles.cell, styles.monoText, { flex: 1.2, textAlign: 'center' }]}>
+                    {stat.count}
+                  </Text>
+                  <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', fontWeight: '700', color: colors.primaryNavy }]}>
+                    {formatCurrency(stat.amount)}
+                  </Text>
+                  <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right', color: colors.textSecondary }]}>
+                    {stat.pct.toFixed(1)}%
+                  </Text>
+                  <View style={{ flex: 3.0, justifyContent: 'center' }}>
+                    <View style={styles.barTrack}>
+                      <View
+                        style={[
+                          styles.barFill,
+                          { width: `${Math.min(100, Math.max(2, stat.pct))}%` },
+                        ]}
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))
-          )}
-        </View>
+              ))
+            )}
+          </View>
+        </ScrollView>
       </View>
     </ScrollView>
   );

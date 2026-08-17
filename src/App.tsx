@@ -6,6 +6,7 @@ import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoginView } from './components/auth/LoginView';
 import { ToastContainer } from './components/common/ToastContainer';
+import { useIsMobile } from './utils/useIsMobile';
 import { colors } from './theme/colors';
 
 // Modules
@@ -22,6 +23,7 @@ import { SettingsView } from './components/modules/settings/SettingsView';
 
 const WorkspaceShell: React.FC = () => {
   const { activeModule } = useFinance();
+  const isMobile = useIsMobile(768);
 
   const renderActiveModule = () => {
     switch (activeModule) {
@@ -54,9 +56,9 @@ const WorkspaceShell: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Header />
-        <View style={styles.contentRow}>
+        <View style={[styles.contentRow, isMobile && styles.contentRowMobile]}>
           <Sidebar />
-          <View style={styles.mainContent}>
+          <View style={[styles.mainContent, isMobile && styles.mainContentMobile]}>
             {renderActiveModule()}
           </View>
         </View>
@@ -107,9 +109,16 @@ const styles = StyleSheet.create<any>({
     flexDirection: 'row',
     height: 'calc(100% - 48px)' as any,
   },
+  contentRowMobile: {
+    flexDirection: 'column',
+    height: 'calc(100% - 44px)' as any,
+  },
   mainContent: {
     flex: 1,
     backgroundColor: colors.bgApp,
     overflow: 'hidden',
+  },
+  mainContentMobile: {
+    paddingBottom: 54, // space for bottom navigation bar
   },
 });

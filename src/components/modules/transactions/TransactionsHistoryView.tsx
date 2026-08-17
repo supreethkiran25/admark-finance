@@ -128,67 +128,69 @@ export const TransactionsHistoryView: React.FC = () => {
       </View>
 
       {/* Transactions Table */}
-      <View style={styles.table}>
-        <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Ref #</Text>
-          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Date</Text>
-          <Text style={[styles.cell, { flex: 3.2, fontWeight: '700' }]}>Payee / Transaction Description</Text>
-          <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Category</Text>
-          <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>Amount (₹)</Text>
-          <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Status</Text>
-          <Text style={[styles.cell, { flex: 0.8, textAlign: 'center', fontWeight: '700' }]}>Delete</Text>
-        </View>
-
-        {filtered.length === 0 ? (
-          <View style={styles.emptyTable}>
-            <Receipt size={28} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No Transactions Found</Text>
-            <Text style={styles.emptySub}>
-              Upload a bank statement under "Upload Statement" to extract and review transactions.
-            </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+        <View style={[styles.table, { minWidth: 680 }]}>
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Ref #</Text>
+            <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Date</Text>
+            <Text style={[styles.cell, { flex: 3.2, fontWeight: '700' }]}>Payee / Transaction Description</Text>
+            <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Category</Text>
+            <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>Amount (₹)</Text>
+            <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Status</Text>
+            <Text style={[styles.cell, { flex: 0.8, textAlign: 'center', fontWeight: '700' }]}>Delete</Text>
           </View>
-        ) : (
-          filtered.map(item => (
-            <View key={item.id} style={styles.tableRow}>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.1, color: colors.textMuted }]}>
-                {item.referenceNumber}
+
+          {filtered.length === 0 ? (
+            <View style={styles.emptyTable}>
+              <Receipt size={28} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Transactions Found</Text>
+              <Text style={styles.emptySub}>
+                Upload a bank statement under "Upload Statement" to extract and review transactions.
               </Text>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(item.date)}</Text>
-              <View style={{ flex: 3.2 }}>
-                <Text style={[styles.cell, { fontWeight: '600' }]} numberOfLines={1}>
-                  {item.description}
+            </View>
+          ) : (
+            filtered.map(item => (
+              <View key={item.id} style={styles.tableRow}>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.1, color: colors.textMuted }]}>
+                  {item.referenceNumber}
                 </Text>
-                {item.notes && (
-                  <Text style={{ fontSize: 9.5, color: colors.textMuted }} numberOfLines={1}>
-                    {item.notes}
+                <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(item.date)}</Text>
+                <View style={{ flex: 3.2 }}>
+                  <Text style={[styles.cell, { fontWeight: '600' }]} numberOfLines={1}>
+                    {item.description}
                   </Text>
-                )}
-              </View>
-              <Text style={[styles.cell, { flex: 1.8, color: colors.textSecondary }]}>{item.category}</Text>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right', fontWeight: '700', color: colors.debitText }]}>
-                {formatCurrency(item.amount)}
-              </Text>
-              <View style={{ flex: 1.0, alignItems: 'center' }}>
-                <View style={styles.statusChip}>
-                  <Text style={styles.statusChipText}>{item.status}</Text>
+                  {item.notes && (
+                    <Text style={{ fontSize: 9.5, color: colors.textMuted }} numberOfLines={1}>
+                      {item.notes}
+                    </Text>
+                  )}
+                </View>
+                <Text style={[styles.cell, { flex: 1.8, color: colors.textSecondary }]}>{item.category}</Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right', fontWeight: '700', color: colors.debitText }]}>
+                  {formatCurrency(item.amount)}
+                </Text>
+                <View style={{ flex: 1.0, alignItems: 'center' }}>
+                  <View style={styles.statusChip}>
+                    <Text style={styles.statusChipText}>{item.status}</Text>
+                  </View>
+                </View>
+                <View style={{ flex: 0.8, alignItems: 'center' }}>
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => {
+                      if (confirm(`Remove transaction ${item.referenceNumber}?`)) {
+                        deleteExpense(item.id);
+                      }
+                    }}
+                  >
+                    <Trash2 size={11} color={colors.debitText} />
+                  </TouchableOpacity>
                 </View>
               </View>
-              <View style={{ flex: 0.8, alignItems: 'center' }}>
-                <TouchableOpacity
-                  style={styles.deleteBtn}
-                  onPress={() => {
-                    if (confirm(`Remove transaction ${item.referenceNumber}?`)) {
-                      deleteExpense(item.id);
-                    }
-                  }}
-                >
-                  <Trash2 size={11} color={colors.debitText} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
     </ScrollView>
   );
 };

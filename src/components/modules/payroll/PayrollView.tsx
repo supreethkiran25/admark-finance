@@ -333,72 +333,74 @@ export const PayrollView: React.FC = () => {
           </View>
         </View>
 
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.cell, { flex: 1.2, fontWeight: '700' }]}>Employee ID</Text>
-            <Text style={[styles.cell, { flex: 2.5, fontWeight: '700' }]}>Full Name & Department</Text>
-            <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Base Pay (₹)</Text>
-            <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Allowances (₹)</Text>
-            <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Deductions (₹)</Text>
-            <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Net Salary (₹)</Text>
-            <Text style={[styles.cell, { flex: 1.4, textAlign: 'center', fontWeight: '700' }]}>Action</Text>
-          </View>
-
-          {employees.length === 0 ? (
-            <View style={{ padding: 24, alignItems: 'center' }}>
-              <Text style={{ fontSize: 11, color: colors.textMuted }}>No employee salary records.</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+          <View style={[styles.table, { minWidth: 720 }]}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.cell, { flex: 1.2, fontWeight: '700' }]}>Employee ID</Text>
+              <Text style={[styles.cell, { flex: 2.5, fontWeight: '700' }]}>Full Name & Department</Text>
+              <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Base Pay (₹)</Text>
+              <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Allowances (₹)</Text>
+              <Text style={[styles.cell, { flex: 1.4, textAlign: 'right', fontWeight: '700' }]}>Deductions (₹)</Text>
+              <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Net Salary (₹)</Text>
+              <Text style={[styles.cell, { flex: 1.4, textAlign: 'center', fontWeight: '700' }]}>Action</Text>
             </View>
-          ) : (
-            employees.map(emp => {
-              const base = emp.monthlySalary || 0;
-              const allow = emp.allowances || 0;
-              const deduct = emp.deductions || 0;
-              const net = base + allow - deduct;
 
-              return (
-                <View key={emp.id} style={styles.tableRow}>
-                  <Text style={[styles.cell, styles.monoText, { flex: 1.2, fontWeight: '700' }]}>
-                    {emp.employeeId}
-                  </Text>
-                  <View style={{ flex: 2.5 }}>
-                    <Text style={[styles.cell, { fontWeight: '700' }]}>{emp.fullName}</Text>
-                    <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{emp.department} • {emp.position}</Text>
+            {employees.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>No employee salary records.</Text>
+              </View>
+            ) : (
+              employees.map(emp => {
+                const base = emp.monthlySalary || 0;
+                const allow = emp.allowances || 0;
+                const deduct = emp.deductions || 0;
+                const net = base + allow - deduct;
+
+                return (
+                  <View key={emp.id} style={styles.tableRow}>
+                    <Text style={[styles.cell, styles.monoText, { flex: 1.2, fontWeight: '700' }]}>
+                      {emp.employeeId}
+                    </Text>
+                    <View style={{ flex: 2.5 }}>
+                      <Text style={[styles.cell, { fontWeight: '700' }]}>{emp.fullName}</Text>
+                      <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{emp.department} • {emp.position}</Text>
+                    </View>
+                    <Text style={[styles.cell, styles.monoText, { flex: 1.4, textAlign: 'right' }]}>
+                      {formatCurrency(base)}
+                    </Text>
+                    <Text style={[styles.cell, styles.monoText, { flex: 1.4, textAlign: 'right', color: colors.creditText }]}>
+                      +{formatCurrency(allow)}
+                    </Text>
+                    <Text style={[styles.cell, styles.monoText, { flex: 1.4, textAlign: 'right', color: colors.debitText }]}>
+                      -{formatCurrency(deduct)}
+                    </Text>
+                    <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', fontWeight: '700', color: colors.primaryNavy }]}>
+                      {formatCurrency(net)}
+                    </Text>
+                    <View style={{ flex: 1.4, alignItems: 'center' }}>
+                      <TouchableOpacity
+                        style={styles.paySmallBtn}
+                        onPress={() => {
+                          setPayFormData({
+                            employeeId: emp.id,
+                            fiscalMonth: selectedMonth,
+                            paymentDate: new Date().toISOString().split('T')[0],
+                            paymentMethod: 'NEFT / RTGS Corporate NetBanking',
+                            referenceNumber: `SAL-${selectedMonth}-${emp.employeeId}`,
+                            notes: `Salary disbursement for ${emp.fullName}`,
+                          });
+                          setIsPayModalOpen(true);
+                        }}
+                      >
+                        <Text style={styles.paySmallBtnText}>Disburse Pay</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <Text style={[styles.cell, styles.monoText, { flex: 1.4, textAlign: 'right' }]}>
-                    {formatCurrency(base)}
-                  </Text>
-                  <Text style={[styles.cell, styles.monoText, { flex: 1.4, textAlign: 'right', color: colors.creditText }]}>
-                    +{formatCurrency(allow)}
-                  </Text>
-                  <Text style={[styles.cell, styles.monoText, { flex: 1.4, textAlign: 'right', color: colors.debitText }]}>
-                    -{formatCurrency(deduct)}
-                  </Text>
-                  <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', fontWeight: '700', color: colors.primaryNavy }]}>
-                    {formatCurrency(net)}
-                  </Text>
-                  <View style={{ flex: 1.4, alignItems: 'center' }}>
-                    <TouchableOpacity
-                      style={styles.paySmallBtn}
-                      onPress={() => {
-                        setPayFormData({
-                          employeeId: emp.id,
-                          fiscalMonth: selectedMonth,
-                          paymentDate: new Date().toISOString().split('T')[0],
-                          paymentMethod: 'NEFT / RTGS Corporate NetBanking',
-                          referenceNumber: `SAL-${selectedMonth}-${emp.employeeId}`,
-                          notes: `Salary disbursement for ${emp.fullName}`,
-                        });
-                        setIsPayModalOpen(true);
-                      }}
-                    >
-                      <Text style={styles.paySmallBtnText}>Disburse Pay</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              );
-            })
-          )}
-        </View>
+                );
+              })
+            )}
+          </View>
+        </ScrollView>
       </View>
 
       {/* MODAL: SALARY PAYMENT WORKFLOW */}

@@ -205,95 +205,97 @@ export const SuppliersView: React.FC = () => {
       </View>
 
       {/* Suppliers Table */}
-      <View style={styles.table}>
-        <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={[styles.cell, { flex: 2.8, fontWeight: '700' }]}>Supplier Company</Text>
-          <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Category</Text>
-          <Text style={[styles.cell, { flex: 1.5, fontWeight: '700' }]}>Payment Terms</Text>
-          <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Pending Payment (₹)</Text>
-          <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Paid YTD (₹)</Text>
-          <Text style={[styles.cell, { flex: 1.6, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
-        </View>
-
-        {filteredSuppliers.length === 0 ? (
-          <View style={styles.emptyTable}>
-            <Building2 size={28} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No Suppliers Registered</Text>
-            <Text style={styles.emptySub}>
-              Click "+ Add Supplier" to record your service providers, software vendors, and contractors.
-            </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+        <View style={[styles.table, { minWidth: 700 }]}>
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.cell, { flex: 2.8, fontWeight: '700' }]}>Supplier Company</Text>
+            <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Category</Text>
+            <Text style={[styles.cell, { flex: 1.5, fontWeight: '700' }]}>Payment Terms</Text>
+            <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Pending Payment (₹)</Text>
+            <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Paid YTD (₹)</Text>
+            <Text style={[styles.cell, { flex: 1.6, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
           </View>
-        ) : (
-          filteredSuppliers.map(s => (
-            <View key={s.id} style={styles.tableRow}>
-              <View style={{ flex: 2.8 }}>
-                <Text style={[styles.cell, { fontWeight: '700' }]}>{s.name}</Text>
-                <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{s.contactEmail}</Text>
-              </View>
 
-              <Text style={[styles.cell, { flex: 1.8 }]}>{s.category}</Text>
-              <Text style={[styles.cell, { flex: 1.5, color: colors.textSecondary }]}>{s.paymentTerms}</Text>
-
-              <Text
-                style={[
-                  styles.cell,
-                  styles.monoText,
-                  { flex: 1.6, textAlign: 'right', color: s.pendingPaymentAmount > 0 ? colors.debitText : colors.textMuted, fontWeight: s.pendingPaymentAmount > 0 ? '700' : 'normal' },
-                ]}
-              >
-                {formatCurrency(s.pendingPaymentAmount)}
+          {filteredSuppliers.length === 0 ? (
+            <View style={styles.emptyTable}>
+              <Building2 size={28} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Suppliers Registered</Text>
+              <Text style={styles.emptySub}>
+                Click "+ Add Supplier" to record your service providers, software vendors, and contractors.
               </Text>
+            </View>
+          ) : (
+            filteredSuppliers.map(s => (
+              <View key={s.id} style={styles.tableRow}>
+                <View style={{ flex: 2.8 }}>
+                  <Text style={[styles.cell, { fontWeight: '700' }]}>{s.name}</Text>
+                  <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{s.contactEmail}</Text>
+                </View>
 
-              <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', color: colors.primaryNavy, fontWeight: '600' }]}>
-                {formatCurrency(s.totalPaidYTD)}
-              </Text>
+                <Text style={[styles.cell, { flex: 1.8 }]}>{s.category}</Text>
+                <Text style={[styles.cell, { flex: 1.5, color: colors.textSecondary }]}>{s.paymentTerms}</Text>
 
-              <View style={{ flex: 1.6, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-                {s.pendingPaymentAmount > 0 && (
+                <Text
+                  style={[
+                    styles.cell,
+                    styles.monoText,
+                    { flex: 1.6, textAlign: 'right', color: s.pendingPaymentAmount > 0 ? colors.debitText : colors.textMuted, fontWeight: s.pendingPaymentAmount > 0 ? '700' : 'normal' },
+                  ]}
+                >
+                  {formatCurrency(s.pendingPaymentAmount)}
+                </Text>
+
+                <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', color: colors.primaryNavy, fontWeight: '600' }]}>
+                  {formatCurrency(s.totalPaidYTD)}
+                </Text>
+
+                <View style={{ flex: 1.6, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                  {s.pendingPaymentAmount > 0 && (
+                    <TouchableOpacity
+                      style={styles.payBtn}
+                      onPress={() => {
+                        setPayingSupplier(s);
+                        setPayAmountInput(s.pendingPaymentAmount.toString());
+                      }}
+                    >
+                      <CreditCard size={10} color="#fff" />
+                      <Text style={styles.payBtnText}>Pay</Text>
+                    </TouchableOpacity>
+                  )}
+
                   <TouchableOpacity
-                    style={styles.payBtn}
+                    style={styles.iconBtn}
                     onPress={() => {
-                      setPayingSupplier(s);
-                      setPayAmountInput(s.pendingPaymentAmount.toString());
+                      setEditingSupplier(s);
+                      setFormData({
+                        name: s.name,
+                        category: s.category,
+                        contactEmail: s.contactEmail,
+                        paymentTerms: s.paymentTerms,
+                        pendingPaymentAmount: s.pendingPaymentAmount.toString(),
+                        notes: s.notes || '',
+                      });
                     }}
                   >
-                    <CreditCard size={10} color="#fff" />
-                    <Text style={styles.payBtnText}>Pay</Text>
+                    <Edit3 size={11} color={colors.textSecondary} />
                   </TouchableOpacity>
-                )}
 
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={() => {
-                    setEditingSupplier(s);
-                    setFormData({
-                      name: s.name,
-                      category: s.category,
-                      contactEmail: s.contactEmail,
-                      paymentTerms: s.paymentTerms,
-                      pendingPaymentAmount: s.pendingPaymentAmount.toString(),
-                      notes: s.notes || '',
-                    });
-                  }}
-                >
-                  <Edit3 size={11} color={colors.textSecondary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
-                  onPress={() => {
-                    if (confirm(`Remove supplier ${s.name}?`)) {
-                      deleteSupplier(s.id);
-                    }
-                  }}
-                >
-                  <Trash2 size={11} color={colors.debitText} />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
+                    onPress={() => {
+                      if (confirm(`Remove supplier ${s.name}?`)) {
+                        deleteSupplier(s.id);
+                      }
+                    }}
+                  >
+                    <Trash2 size={11} color={colors.debitText} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))
-        )}
-      </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
 
       {/* Modal: Add/Edit Supplier */}
       <Modal

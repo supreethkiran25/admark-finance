@@ -292,101 +292,103 @@ export const EmployeeManagementView: React.FC = () => {
       </View>
 
       {/* Employees Table */}
-      <View style={styles.table}>
-        <View style={[styles.tableRow, styles.tableHeader]}>
-          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Emp ID</Text>
-          <Text style={[styles.cell, { flex: 2.8, fontWeight: '700' }]}>Full Name & Email</Text>
-          <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Department & Role</Text>
-          <Text style={[styles.cell, { flex: 1.3, fontWeight: '700' }]}>Type</Text>
-          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Joined</Text>
-          <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Monthly Salary (₹)</Text>
-          <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Status</Text>
-          <Text style={[styles.cell, { flex: 1.4, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
-        </View>
-
-        {filteredEmployees.length === 0 ? (
-          <View style={styles.emptyTable}>
-            <Users size={28} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>No Employees Registered</Text>
-            <Text style={styles.emptySub}>
-              Click "+ Add Employee" above to record company team members and salary packages.
-            </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={true} style={{ width: '100%' }}>
+        <View style={[styles.table, { minWidth: 720 }]}>
+          <View style={[styles.tableRow, styles.tableHeader]}>
+            <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Emp ID</Text>
+            <Text style={[styles.cell, { flex: 2.8, fontWeight: '700' }]}>Full Name & Email</Text>
+            <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Department & Role</Text>
+            <Text style={[styles.cell, { flex: 1.3, fontWeight: '700' }]}>Type</Text>
+            <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Joined</Text>
+            <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Monthly Salary (₹)</Text>
+            <Text style={[styles.cell, { flex: 1.0, textAlign: 'center', fontWeight: '700' }]}>Status</Text>
+            <Text style={[styles.cell, { flex: 1.4, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
           </View>
-        ) : (
-          filteredEmployees.map(emp => (
-            <View key={emp.id} style={styles.tableRow}>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.1, fontWeight: '700' }]}>
-                {emp.employeeId}
+
+          {filteredEmployees.length === 0 ? (
+            <View style={styles.emptyTable}>
+              <Users size={28} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No Employees Registered</Text>
+              <Text style={styles.emptySub}>
+                Click "+ Add Employee" above to record company team members and salary packages.
               </Text>
+            </View>
+          ) : (
+            filteredEmployees.map(emp => (
+              <View key={emp.id} style={styles.tableRow}>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.1, fontWeight: '700' }]}>
+                  {emp.employeeId}
+                </Text>
 
-              <View style={{ flex: 2.8 }}>
-                <Text style={[styles.cell, { fontWeight: '700' }]}>{emp.fullName}</Text>
-                <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{emp.email}</Text>
-              </View>
+                <View style={{ flex: 2.8 }}>
+                  <Text style={[styles.cell, { fontWeight: '700' }]}>{emp.fullName}</Text>
+                  <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{emp.email}</Text>
+                </View>
 
-              <View style={{ flex: 1.8 }}>
-                <Text style={[styles.cell, { fontWeight: '600' }]}>{emp.position}</Text>
-                <Text style={{ fontSize: 9.5, color: colors.textSecondary }}>{emp.department}</Text>
-              </View>
+                <View style={{ flex: 1.8 }}>
+                  <Text style={[styles.cell, { fontWeight: '600' }]}>{emp.position}</Text>
+                  <Text style={{ fontSize: 9.5, color: colors.textSecondary }}>{emp.department}</Text>
+                </View>
 
-              <Text style={[styles.cell, { flex: 1.3, color: colors.textSecondary }]}>{emp.employmentType}</Text>
-              <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(emp.joiningDate)}</Text>
+                <Text style={[styles.cell, { flex: 1.3, color: colors.textSecondary }]}>{emp.employmentType}</Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(emp.joiningDate)}</Text>
 
-              <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', fontWeight: '700', color: colors.primaryNavy }]}>
-                {formatCurrency(emp.monthlySalary)}
-              </Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', fontWeight: '700', color: colors.primaryNavy }]}>
+                  {formatCurrency(emp.monthlySalary)}
+                </Text>
 
-              <View style={{ flex: 1.0, alignItems: 'center' }}>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: emp.status === 'Active' ? colors.creditBg : colors.bgSurfaceAlt },
-                  ]}
-                >
-                  <Text
+                <View style={{ flex: 1.0, alignItems: 'center' }}>
+                  <View
                     style={[
-                      styles.statusBadgeText,
-                      { color: emp.status === 'Active' ? colors.creditText : colors.textMuted },
+                      styles.statusBadge,
+                      { backgroundColor: emp.status === 'Active' ? colors.creditBg : colors.bgSurfaceAlt },
                     ]}
                   >
-                    {emp.status}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.statusBadgeText,
+                        { color: emp.status === 'Active' ? colors.creditText : colors.textMuted },
+                      ]}
+                    >
+                      {emp.status}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ flex: 1.4, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                  <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={() => setViewingEmployee(emp)}
+                    accessibilityLabel="View details and salary history"
+                  >
+                    <Eye size={11} color={colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.iconBtn}
+                    onPress={() => openEditModal(emp)}
+                    accessibilityLabel="Edit employee"
+                  >
+                    <Edit3 size={11} color={colors.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
+                    onPress={() => {
+                      if (confirm(`Remove ${emp.fullName} (${emp.employeeId}) from employee directory?`)) {
+                        deleteEmployee(emp.id);
+                      }
+                    }}
+                    accessibilityLabel="Delete employee"
+                  >
+                    <Trash2 size={11} color={colors.debitText} />
+                  </TouchableOpacity>
                 </View>
               </View>
-
-              <View style={{ flex: 1.4, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={() => setViewingEmployee(emp)}
-                  accessibilityLabel="View details and salary history"
-                >
-                  <Eye size={11} color={colors.textSecondary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={() => openEditModal(emp)}
-                  accessibilityLabel="Edit employee"
-                >
-                  <Edit3 size={11} color={colors.textSecondary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.iconBtn, { backgroundColor: colors.debitBg }]}
-                  onPress={() => {
-                    if (confirm(`Remove ${emp.fullName} (${emp.employeeId}) from employee directory?`)) {
-                      deleteEmployee(emp.id);
-                    }
-                  }}
-                  accessibilityLabel="Delete employee"
-                >
-                  <Trash2 size={11} color={colors.debitText} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
-      </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
 
       {/* MODAL: ADD / EDIT EMPLOYEE */}
       <Modal
