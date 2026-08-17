@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal as RNModal } from 'react-native';
-import { X } from 'lucide-react-native';
+import { X } from 'lucide-react';
 import { colors } from '../../theme/colors';
 
 interface ModalProps {
@@ -8,7 +8,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   subtitle?: string;
-  size?: 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -24,7 +24,7 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const maxWidth = size === 'xl' ? 980 : size === 'lg' ? 760 : 540;
+  const maxWidth = size === 'xl' ? 980 : size === 'lg' ? 760 : size === 'sm' ? 420 : 540;
 
   return (
     <RNModal

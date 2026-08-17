@@ -1,54 +1,52 @@
 import React from 'react';
 import { View, StyleSheet, SafeAreaView } from 'react-native';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { FinanceProvider, useFinance } from './context/FinanceContext';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
-import { CommandPalette } from './components/common/CommandPalette';
+import { LoginView } from './components/auth/LoginView';
 import { ToastContainer } from './components/common/ToastContainer';
 import { colors } from './theme/colors';
 
-// Enterprise Accounting Modules in React Native
-import { ExecutiveOverview } from './components/modules/overview/ExecutiveOverview';
-import { ExpenseManagement } from './components/modules/expenses/ExpenseManagement';
-import { BankStatementModule } from './components/modules/statements/BankStatementModule';
-import { CategorizationModule } from './components/modules/categorization/CategorizationModule';
-import { EmployeeExpensesModule } from './components/modules/employees/EmployeeExpensesModule';
-import { BudgetModule } from './components/modules/budgets/BudgetModule';
-import { VendorModule } from './components/modules/vendors/VendorModule';
-import { InvoiceModule } from './components/modules/invoices/InvoiceModule';
-import { ReportsModule } from './components/modules/reports/ReportsModule';
-import { AnalyticsModule } from './components/modules/analytics/AnalyticsModule';
-import { SecurityModule } from './components/modules/security/SecurityModule';
+// Modules
+import { SimplifiedDashboard } from './components/modules/dashboard/SimplifiedDashboard';
+import { StatementAnalysisWorkflow } from './components/modules/statement-analysis/StatementAnalysisWorkflow';
+import { SimpleExpenseManagement } from './components/modules/expenses/SimpleExpenseManagement';
+import { TransactionsHistoryView } from './components/modules/transactions/TransactionsHistoryView';
+import { EmployeeManagementView } from './components/modules/employees/EmployeeManagementView';
+import { PayrollView } from './components/modules/payroll/PayrollView';
+import { SimpleBudgetsView } from './components/modules/budgets/SimpleBudgetsView';
+import { SuppliersView } from './components/modules/suppliers/SuppliersView';
+import { SimpleReportsView } from './components/modules/reports/SimpleReportsView';
+import { SettingsView } from './components/modules/settings/SettingsView';
 
 const WorkspaceShell: React.FC = () => {
   const { activeModule } = useFinance();
 
   const renderActiveModule = () => {
     switch (activeModule) {
-      case 'overview':
-        return <ExecutiveOverview />;
+      case 'dashboard':
+        return <SimplifiedDashboard />;
+      case 'upload-statement':
+        return <StatementAnalysisWorkflow />;
       case 'expenses':
-        return <ExpenseManagement />;
-      case 'statements':
-        return <BankStatementModule />;
-      case 'categorization':
-        return <CategorizationModule />;
+        return <SimpleExpenseManagement />;
+      case 'transactions':
+        return <TransactionsHistoryView />;
       case 'employees':
-        return <EmployeeExpensesModule />;
+        return <EmployeeManagementView />;
+      case 'payroll':
+        return <PayrollView />;
       case 'budgets':
-        return <BudgetModule />;
-      case 'vendors':
-        return <VendorModule />;
-      case 'invoices':
-        return <InvoiceModule />;
+        return <SimpleBudgetsView />;
+      case 'suppliers':
+        return <SuppliersView />;
       case 'reports':
-        return <ReportsModule />;
-      case 'analytics':
-        return <AnalyticsModule />;
-      case 'security':
-        return <SecurityModule />;
+        return <SimpleReportsView />;
+      case 'settings':
+        return <SettingsView />;
       default:
-        return <ExecutiveOverview />;
+        return <SimplifiedDashboard />;
     }
   };
 
@@ -62,46 +60,56 @@ const WorkspaceShell: React.FC = () => {
             {renderActiveModule()}
           </View>
         </View>
-        <CommandPalette />
         <ToastContainer />
       </View>
     </SafeAreaView>
   );
 };
 
-export function App() {
+const AuthGate: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <LoginView />;
+  }
+
   return (
     <FinanceProvider>
       <WorkspaceShell />
     </FinanceProvider>
   );
+};
+
+export function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
+  );
 }
+
+export default App;
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgApp,
     height: '100%',
-    width: '100%',
   },
   container: {
     flex: 1,
-    flexDirection: 'column',
-    height: '100%',
     backgroundColor: colors.bgApp,
+    height: '100%',
+    overflow: 'hidden',
   },
   contentRow: {
     flex: 1,
     flexDirection: 'row',
-    height: '100%',
-    overflow: 'hidden',
+    height: 'calc(100% - 48px)' as any,
   },
   mainContent: {
     flex: 1,
     backgroundColor: colors.bgApp,
-    height: '100%',
     overflow: 'hidden',
   },
 });
-
-export default App;

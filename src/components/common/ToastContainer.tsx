@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { colors } from '../../theme/colors';
 

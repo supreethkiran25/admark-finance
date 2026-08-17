@@ -3,304 +3,312 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Modal 
 import {
   Search,
   ArrowRight,
-  PlusCircle,
-  FileText,
-  DollarSign,
-  Building,
-  Shield,
-  Layers,
+  Upload,
+  Receipt,
+  FileSpreadsheet,
   PieChart,
-  Users,
-  Sliders,
-  CheckCircle,
+  Building2,
+  FileText,
+  Settings,
   X,
-} from 'lucide-react-native';
+} from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { NavigationModule } from '../../types/finance';
 import { formatCurrency } from '../../utils/currency';
 import { colors } from '../../theme/colors';
 
-export const CommandPalette: React.FC = () => {
+export const CommandPalette: React.FC<{ isOpen?: boolean; onClose?: () => void }> = ({ isOpen = false, onClose }) => {
   const {
-    commandPaletteOpen,
-    setCommandPaletteOpen,
     setActiveModule,
     expenses,
-    vendors,
-    setIsCompactMode,
-    isCompactMode,
+    suppliers,
   } = useFinance();
 
   const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(isOpen);
+
+  useEffect(() => {
+    setOpen(isOpen);
+  }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setCommandPaletteOpen(!commandPaletteOpen);
-      } else if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) {
-        e.preventDefault();
-        setCommandPaletteOpen(true);
-      } else if (e.key === 'Escape' && commandPaletteOpen) {
-        setCommandPaletteOpen(false);
+        setOpen(prev => !prev);
+      } else if (e.key === 'Escape' && open) {
+        setOpen(false);
+        onClose?.();
       }
     };
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [commandPaletteOpen, setCommandPaletteOpen]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
-  if (!commandPaletteOpen) return null;
+  if (!open) return null;
 
   interface PaletteItem {
     id: string;
     title: string;
     subtitle?: string;
-    group: 'Navigation' | 'Actions' | 'Expenses' | 'Vendors';
-    icon: React.ReactNode;
+    category: 'Navigation' | 'Expenses' | 'Suppliers';
     action: () => void;
   }
 
-  const navItems: PaletteItem[] = [
+  const items: PaletteItem[] = [
     {
-      id: 'nav-overview',
-      title: 'Executive Overview',
-      subtitle: 'Liquid cash reserves (₹), operational metrics & ledger',
-      group: 'Navigation',
-      icon: <PieChart size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('overview'); setCommandPaletteOpen(false); },
+      id: 'nav-dash',
+      title: 'Go to Dashboard',
+      subtitle: 'View spending overview and key metrics',
+      category: 'Navigation',
+      action: () => setActiveModule('dashboard'),
     },
     {
-      id: 'nav-expenses',
-      title: 'Expense Management (General Ledger)',
-      subtitle: 'Record expenses, receipt OCR, GST & TDS approvals',
-      group: 'Navigation',
-      icon: <DollarSign size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('expenses'); setCommandPaletteOpen(false); },
+      id: 'nav-upload',
+      title: 'Upload Bank Statement',
+      subtitle: 'Analyze PDF, CSV, or Excel statement',
+      category: 'Navigation',
+      action: () => setActiveModule('upload-statement'),
     },
     {
-      id: 'nav-statements',
-      title: 'HDFC / ICICI Statements & Reconcile',
-      subtitle: 'Parse Indian bank statements and auto-reconcile',
-      group: 'Navigation',
-      icon: <Layers size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('statements'); setCommandPaletteOpen(false); },
+      id: 'nav-exp',
+      title: 'Manage Expenses',
+      subtitle: 'Record and edit operational expenses',
+      category: 'Navigation',
+      action: () => setActiveModule('expenses'),
     },
     {
-      id: 'nav-categorization',
-      title: 'Automatic Categorization Engine',
-      subtitle: 'Indian software agency keyword & regex rule matching',
-      group: 'Navigation',
-      icon: <Sliders size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('categorization'); setCommandPaletteOpen(false); },
+      id: 'nav-txs',
+      title: 'Transaction History',
+      subtitle: 'Browse all recorded and imported transactions',
+      category: 'Navigation',
+      action: () => setActiveModule('transactions'),
     },
     {
-      id: 'nav-employees',
-      title: 'Employee Reimbursements & Claims',
-      subtitle: 'IndiGo travel, WFH stipends, hardware claims queue',
-      group: 'Navigation',
-      icon: <Users size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('employees'); setCommandPaletteOpen(false); },
+      id: 'nav-emp',
+      title: 'Employees Directory',
+      subtitle: 'Manage staff, positions, and contact records',
+      category: 'Navigation',
+      action: () => setActiveModule('employees'),
+    },
+    {
+      id: 'nav-payroll',
+      title: 'Payroll & Salary Management',
+      subtitle: 'Monthly salary disbursements, tracker, and payroll records',
+      category: 'Navigation',
+      action: () => setActiveModule('payroll'),
     },
     {
       id: 'nav-budgets',
-      title: 'Department Budgets (₹ Lakhs)',
-      subtitle: 'Allocated vs spent variance & utilization alerts',
-      group: 'Navigation',
-      icon: <CheckCircle size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('budgets'); setCommandPaletteOpen(false); },
+      title: 'Department Budgets',
+      subtitle: 'View and edit monthly spending limits',
+      category: 'Navigation',
+      action: () => setActiveModule('budgets'),
     },
     {
-      id: 'nav-vendors',
-      title: 'Vendor Directory & Accounts Payable',
-      subtitle: 'AWS India, WeWork, SAM Legal, GST & TDS records',
-      group: 'Navigation',
-      icon: <Building size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('vendors'); setCommandPaletteOpen(false); },
-    },
-    {
-      id: 'nav-invoices',
-      title: 'Invoices (GST Tax Invoices & AP)',
-      subtitle: 'Client billing retainers (AR) & formal tax invoices',
-      group: 'Navigation',
-      icon: <FileText size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('invoices'); setCommandPaletteOpen(false); },
+      id: 'nav-sup',
+      title: 'Suppliers & Pending Payments',
+      subtitle: 'Manage vendors and settle due invoices',
+      category: 'Navigation',
+      action: () => setActiveModule('suppliers'),
     },
     {
       id: 'nav-reports',
-      title: 'Financial Reports & P&L (₹)',
-      subtitle: 'GAAP P&L, Daily Cash, GST 1099 and PDF export',
-      group: 'Navigation',
-      icon: <FileText size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('reports'); setCommandPaletteOpen(false); },
+      title: 'Spending Reports',
+      subtitle: 'Category breakdowns and export to Excel/CSV',
+      category: 'Navigation',
+      action: () => setActiveModule('reports'),
     },
     {
-      id: 'nav-security',
-      title: 'Security & Audit Log',
-      subtitle: '11 SOC-2 / ISO gates and immutable event trail',
-      group: 'Navigation',
-      icon: <Shield size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('security'); setCommandPaletteOpen(false); },
+      id: 'nav-settings',
+      title: 'Settings',
+      subtitle: 'Account security, password, and preferences',
+      category: 'Navigation',
+      action: () => setActiveModule('settings'),
     },
+    ...expenses.slice(0, 10).map(exp => ({
+      id: `exp-${exp.id}`,
+      title: `${exp.referenceNumber}: ${exp.description}`,
+      subtitle: `${exp.category} • ${formatCurrency(exp.amount)} • ${exp.date}`,
+      category: 'Expenses' as const,
+      action: () => setActiveModule('expenses'),
+    })),
+    ...suppliers.slice(0, 8).map(sup => ({
+      id: `sup-${sup.id}`,
+      title: `Supplier: ${sup.name}`,
+      subtitle: `${sup.category} • Pending: ${formatCurrency(sup.pendingPaymentAmount)}`,
+      category: 'Suppliers' as const,
+      action: () => setActiveModule('suppliers'),
+    })),
   ];
 
-  const actionItems: PaletteItem[] = [
-    {
-      id: 'act-density',
-      title: `Toggle Row Density (${isCompactMode ? 'Compact 32px' : 'Standard 40px'})`,
-      subtitle: 'Switch between dense accounting and standard row layout',
-      group: 'Actions',
-      icon: <Sliders size={14} color={colors.primaryNavy} />,
-      action: () => { setIsCompactMode(prev => !prev); setCommandPaletteOpen(false); },
-    },
-    {
-      id: 'act-new-exp',
-      title: '+ Record New Expense (₹)',
-      subtitle: 'Add transaction with GST/TDS allocation',
-      group: 'Actions',
-      icon: <PlusCircle size={14} color={colors.primaryNavy} />,
-      action: () => { setActiveModule('expenses'); setCommandPaletteOpen(false); },
-    },
-  ];
-
-  const filteredItems = [
-    ...navItems.filter(
-      i => i.title.toLowerCase().includes(query.toLowerCase()) || (i.subtitle && i.subtitle.toLowerCase().includes(query.toLowerCase()))
-    ),
-    ...actionItems.filter(
-      i => i.title.toLowerCase().includes(query.toLowerCase()) || (i.subtitle && i.subtitle.toLowerCase().includes(query.toLowerCase()))
-    ),
-  ];
+  const filteredItems = items.filter(item => {
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return item.title.toLowerCase().includes(q) || (item.subtitle && item.subtitle.toLowerCase().includes(q));
+  });
 
   return (
     <RNModal
-      visible={commandPaletteOpen}
+      visible={open}
       transparent
       animationType="fade"
-      onRequestClose={() => setCommandPaletteOpen(false)}
+      onRequestClose={() => {
+        setOpen(false);
+        onClose?.();
+      }}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={() => setCommandPaletteOpen(false)}
-      >
-        <TouchableOpacity
-          activeOpacity={1}
-          style={styles.box}
-          onPress={e => e.stopPropagation()}
-        >
-          <View style={styles.searchBar}>
-            <Search size={15} color={colors.textMuted} />
+      <View style={styles.modalOverlay}>
+        <View style={styles.paletteBox}>
+          <View style={styles.inputRow}>
+            <Search size={16} color={colors.textMuted} />
             <TextInput
               style={styles.input}
-              placeholder="Search Indian financial operations, modules, ledger... (ESC to close)"
+              placeholder="Type a command, expense, supplier, or module..."
               placeholderTextColor={colors.textMuted}
               value={query}
               onChangeText={setQuery}
               autoFocus
             />
-            <TouchableOpacity onPress={() => setCommandPaletteOpen(false)}>
+            <TouchableOpacity
+              onPress={() => {
+                setOpen(false);
+                onClose?.();
+              }}
+              style={styles.closeBtn}
+            >
               <X size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ maxHeight: 360 }}>
-            {filteredItems.map(item => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.item}
-                onPress={item.action}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  {item.icon}
+          <ScrollView style={styles.resultsList} contentContainerStyle={{ padding: 6, gap: 4 }}>
+            {filteredItems.length === 0 ? (
+              <View style={styles.empty}>
+                <Text style={styles.emptyText}>No matching commands or records found.</Text>
+              </View>
+            ) : (
+              filteredItems.map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.resultItem}
+                  onPress={() => {
+                    item.action();
+                    setOpen(false);
+                    onClose?.();
+                  }}
+                >
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemTitle}>{item.title}</Text>
-                    {item.subtitle && <Text style={styles.itemSubtitle}>{item.subtitle}</Text>}
+                    {item.subtitle && <Text style={styles.itemSub}>{item.subtitle}</Text>}
                   </View>
-                </View>
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{item.group}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={styles.catBadge}>
+                    <Text style={styles.catBadgeText}>{item.category}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
           </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerKbd}>Esc to close</Text>
+            <Text style={styles.footerKbd}>Ctrl+K to toggle</Text>
+          </View>
+        </View>
+      </View>
     </RNModal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: '8%',
+    paddingTop: 80,
   },
-  box: {
-    width: '92%',
-    maxWidth: 580,
+  paletteBox: {
+    width: 520,
+    maxHeight: 400,
     backgroundColor: colors.bgSurface,
     borderWidth: 1,
-    borderColor: colors.borderStrong,
-    borderRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 10,
+    borderColor: colors.borderDefault,
+    borderRadius: 6,
     overflow: 'hidden',
   },
-  searchBar: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: colors.bgSurface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderDefault,
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    height: 42,
     gap: 8,
   },
   input: {
     flex: 1,
     fontSize: 13,
     color: colors.textPrimary,
-    fontFamily: 'Public Sans, sans-serif',
     outlineStyle: 'none' as any,
   },
-  item: {
+  closeBtn: {
+    padding: 4,
+  },
+  resultsList: {
+    maxHeight: 300,
+  },
+  resultItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderSubtle,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
   },
   itemTitle: {
-    fontSize: 12.5,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: colors.textPrimary,
   },
-  itemSubtitle: {
-    fontSize: 11,
+  itemSub: {
+    fontSize: 10.5,
     color: colors.textMuted,
-    marginTop: 1,
   },
-  badge: {
+  catBadge: {
     paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 2,
+    paddingVertical: 2,
     backgroundColor: colors.bgSurfaceAlt,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
+    borderRadius: 2,
   },
-  badgeText: {
-    fontSize: 10,
+  catBadgeText: {
+    fontSize: 9.5,
     color: colors.textSecondary,
     fontWeight: '600',
+  },
+  empty: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 11.5,
+    color: colors.textMuted,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    backgroundColor: colors.bgSurfaceAlt,
+  },
+  footerKbd: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontFamily: 'Roboto Mono, monospace',
   },
 });

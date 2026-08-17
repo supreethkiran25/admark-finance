@@ -2,223 +2,159 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import {
   LayoutDashboard,
+  Upload,
   Receipt,
   FileSpreadsheet,
-  Cpu,
-  UserCheck,
   PieChart,
   Building2,
   FileText,
-  BarChart3,
-  Shield,
+  Settings,
+  Users,
+  CreditCard,
   Plus,
-  Upload,
-} from 'lucide-react-native';
+} from 'lucide-react';
 import { useFinance } from '../../context/FinanceContext';
 import { NavigationModule } from '../../types/finance';
 import { colors } from '../../theme/colors';
+
+interface NavItem {
+  id: NavigationModule;
+  label: string;
+  icon: (color: string) => React.ReactNode;
+  badge?: number | string;
+  badgeColor?: string;
+}
 
 export const Sidebar: React.FC = () => {
   const {
     activeModule,
     setActiveModule,
-    currentRole,
     isSidebarCollapsed,
-    expenses,
-    transactions,
-    claims,
-    invoices,
+    pendingReviewTransactions,
+    suppliers,
   } = useFinance();
 
-  const pendingExpensesCount = expenses.filter(e => e.status === 'Pending Approval').length;
-  const unmatchedTxsCount = transactions.filter(t => t.reconciliationStatus === 'Unmatched').length;
-  const pendingClaimsCount = claims.filter(c => c.status === 'Submitted').length;
-  const overdueInvoicesCount = invoices.filter(i => i.status === 'Overdue').length;
+  const pendingPaymentsCount = suppliers.filter(s => s.pendingPaymentAmount > 0).length;
 
-  interface NavSection {
-    title: string;
-    items: Array<{
-      id: NavigationModule;
-      label: string;
-      icon: (color: string) => React.ReactNode;
-      badge?: number | string;
-      badgeType?: 'credit' | 'debit' | 'pending';
-    }>;
-  }
-
-  const sections: NavSection[] = [
+  const navItems: NavItem[] = [
     {
-      title: 'Operations Ledger',
-      items: [
-        {
-          id: 'overview',
-          label: 'Executive Overview',
-          icon: (c) => <LayoutDashboard size={14} color={c} />,
-        },
-        {
-          id: 'expenses',
-          label: 'Expense Management',
-          icon: (c) => <Receipt size={14} color={c} />,
-          badge: pendingExpensesCount > 0 ? pendingExpensesCount : undefined,
-          badgeType: 'pending',
-        },
-        {
-          id: 'statements',
-          label: 'HDFC / ICICI Reconcile',
-          icon: (c) => <FileSpreadsheet size={14} color={c} />,
-          badge: unmatchedTxsCount > 0 ? `${unmatchedTxsCount} open` : undefined,
-          badgeType: 'debit',
-        },
-        {
-          id: 'categorization',
-          label: 'Auto-Categorization',
-          icon: (c) => <Cpu size={14} color={c} />,
-        },
-      ],
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: (c) => <LayoutDashboard size={14} color={c} />,
     },
     {
-      title: 'Workforce & Capacity',
-      items: [
-        {
-          id: 'employees',
-          label: 'Employee Claims (INR)',
-          icon: (c) => <UserCheck size={14} color={c} />,
-          badge: pendingClaimsCount > 0 ? pendingClaimsCount : undefined,
-          badgeType: 'pending',
-        },
-        {
-          id: 'budgets',
-          label: 'Department Budgets',
-          icon: (c) => <PieChart size={14} color={c} />,
-        },
-      ],
+      id: 'upload-statement',
+      label: 'Upload Statement',
+      icon: (c) => <Upload size={14} color={c} />,
+      badge: pendingReviewTransactions.length > 0 ? `${pendingReviewTransactions.length} review` : undefined,
+      badgeColor: colors.pendingText,
     },
     {
-      title: 'Commercial & Tax',
-      items: [
-        {
-          id: 'vendors',
-          label: 'Vendor AP & TDS',
-          icon: (c) => <Building2 size={14} color={c} />,
-        },
-        {
-          id: 'invoices',
-          label: 'GST Tax Invoices',
-          icon: (c) => <FileText size={14} color={c} />,
-          badge: overdueInvoicesCount > 0 ? `${overdueInvoicesCount} overdue` : undefined,
-          badgeType: 'debit',
-        },
-      ],
+      id: 'expenses',
+      label: 'Expenses',
+      icon: (c) => <Receipt size={14} color={c} />,
     },
     {
-      title: 'Financial Intelligence',
-      items: [
-        {
-          id: 'reports',
-          label: 'P&L Reports (₹)',
-          icon: (c) => <FileText size={14} color={c} />,
-        },
-        {
-          id: 'analytics',
-          label: 'Financial Analytics',
-          icon: (c) => <BarChart3 size={14} color={c} />,
-        },
-        {
-          id: 'security',
-          label: 'Security & Audit Log',
-          icon: (c) => <Shield size={14} color={c} />,
-        },
-      ],
+      id: 'transactions',
+      label: 'Transactions',
+      icon: (c) => <FileSpreadsheet size={14} color={c} />,
+    },
+    {
+      id: 'employees',
+      label: 'Employees',
+      icon: (c) => <Users size={14} color={c} />,
+    },
+    {
+      id: 'payroll',
+      label: 'Payroll',
+      icon: (c) => <CreditCard size={14} color={c} />,
+    },
+    {
+      id: 'budgets',
+      label: 'Budgets',
+      icon: (c) => <PieChart size={14} color={c} />,
+    },
+    {
+      id: 'suppliers',
+      label: 'Suppliers',
+      icon: (c) => <Building2 size={14} color={c} />,
+      badge: pendingPaymentsCount > 0 ? `${pendingPaymentsCount} due` : undefined,
+      badgeColor: colors.debitText,
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      icon: (c) => <FileText size={14} color={c} />,
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: (c) => <Settings size={14} color={c} />,
     },
   ];
 
-  const sidebarWidth = isSidebarCollapsed ? 54 : 220;
-
   return (
-    <View style={[styles.sidebar, { width: sidebarWidth }]}>
-      <ScrollView style={{ flex: 1, padding: isSidebarCollapsed ? 4 : 8 }}>
-        {currentRole === 'CTO' && !isSidebarCollapsed && (
-          <View style={styles.ctoBanner}>
-            <Text style={styles.ctoBannerText}>
-              <Text style={{ fontWeight: '700' }}>CTO Filter:</Text> Tech & Cloud expenses only.
-            </Text>
-          </View>
-        )}
+    <View style={[styles.sidebar, isSidebarCollapsed && styles.sidebarCollapsed]}>
+      {/* Quick Action Button */}
+      {!isSidebarCollapsed && (
+        <TouchableOpacity
+          style={styles.primaryActionBtn}
+          onPress={() => setActiveModule('upload-statement')}
+        >
+          <Upload size={13} color="#fff" />
+          <Text style={styles.primaryActionBtnText}>Analyze Statement</Text>
+        </TouchableOpacity>
+      )}
 
-        {sections.map((sec, sIdx) => (
-          <View key={sIdx} style={{ marginBottom: 12 }}>
-            {!isSidebarCollapsed && (
-              <Text style={styles.sectionHeader}>{sec.title}</Text>
-            )}
+      {/* Nav Items */}
+      <ScrollView style={styles.navContainer} contentContainerStyle={{ gap: 3, paddingVertical: 8 }}>
+        {navItems.map(item => {
+          const isActive = activeModule === item.id;
+          const activeColor = isActive ? '#fff' : colors.textSecondary;
 
-            <View style={{ gap: 2 }}>
-              {sec.items.map(item => {
-                const isActive = activeModule === item.id;
-                const iconColor = isActive ? colors.primaryBlue : colors.textMuted;
-
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => setActiveModule(item.id)}
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[
+                styles.navItem,
+                isActive && styles.navItemActive,
+                isSidebarCollapsed && styles.navItemCollapsed,
+              ]}
+              onPress={() => setActiveModule(item.id)}
+            >
+              {item.icon(activeColor)}
+              {!isSidebarCollapsed && (
+                <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+                  {item.label}
+                </Text>
+              )}
+              {!isSidebarCollapsed && item.badge && (
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: item.badgeColor ? `${item.badgeColor}20` : colors.bgSurfaceAlt },
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.navItem,
-                      isActive && styles.navItemActive,
-                      isSidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+                      styles.badgeText,
+                      { color: item.badgeColor || colors.textSecondary },
                     ]}
                   >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      {item.icon(iconColor)}
-                      {!isSidebarCollapsed && (
-                        <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-                          {item.label}
-                        </Text>
-                      )}
-                    </View>
-
-                    {!isSidebarCollapsed && item.badge && (
-                      <View
-                        style={[
-                          styles.badge,
-                          item.badgeType === 'debit' && { backgroundColor: colors.debitBg, borderColor: colors.debitBorder },
-                          item.badgeType === 'pending' && { backgroundColor: colors.pendingBg, borderColor: colors.pendingBorder },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.badgeText,
-                            item.badgeType === 'debit' && { color: colors.debitText },
-                            item.badgeType === 'pending' && { color: colors.pendingText },
-                          ]}
-                        >
-                          {item.badge}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        ))}
+                    {item.badge}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
-      {/* Quick Action Footer */}
+      {/* Footer Info */}
       {!isSidebarCollapsed && (
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.primaryActionBtn}
-            onPress={() => setActiveModule('expenses')}
-          >
-            <Plus size={12} color="#fff" />
-            <Text style={styles.primaryActionText}>+ Record Expense</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryActionBtn}
-            onPress={() => setActiveModule('statements')}
-          >
-            <Upload size={12} color={colors.textPrimary} />
-            <Text style={styles.secondaryActionText}>Import Statement</Text>
-          </TouchableOpacity>
+          <Text style={styles.footerText}>CFO Financial Workspace</Text>
+          <Text style={styles.footerSub}>Currency: ₹ INR</Text>
         </View>
       )}
     </View>
@@ -227,111 +163,82 @@ export const Sidebar: React.FC = () => {
 
 const styles = StyleSheet.create({
   sidebar: {
-    backgroundColor: colors.bgSurfaceAlt,
+    width: 200,
+    backgroundColor: colors.bgSurface,
     borderRightWidth: 1,
     borderRightColor: colors.borderDefault,
-    height: '100%',
+    paddingHorizontal: 8,
+    paddingTop: 10,
     justifyContent: 'space-between',
   },
-  ctoBanner: {
-    padding: 6,
-    marginBottom: 8,
-    backgroundColor: colors.infoBg,
-    borderWidth: 1,
-    borderColor: colors.infoBorder,
-    borderRadius: 2,
-  },
-  ctoBannerText: {
-    fontSize: 10,
-    color: colors.infoText,
-    lineHeight: 13,
-  },
-  sectionHeader: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    color: colors.textMuted,
+  sidebarCollapsed: {
+    width: 50,
     paddingHorizontal: 6,
-    marginBottom: 3,
-    letterSpacing: 0.5,
+  },
+  primaryActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.primaryNavy,
+    paddingVertical: 7,
+    borderRadius: 3,
+    marginBottom: 6,
+  },
+  primaryActionBtnText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  navContainer: {
+    flex: 1,
   },
   navItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 8,
+    paddingVertical: 7,
     paddingHorizontal: 8,
-    paddingVertical: 5,
     borderRadius: 3,
-    borderWidth: 1,
-    borderColor: 'transparent',
   },
   navItemActive: {
-    backgroundColor: colors.bgSurface,
-    borderColor: colors.borderDefault,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    backgroundColor: colors.primaryNavy,
+  },
+  navItemCollapsed: {
+    justifyContent: 'center',
+    paddingHorizontal: 0,
   },
   navLabel: {
     fontSize: 11.5,
-    fontWeight: '500',
-    color: colors.textSecondary,
+    fontWeight: '600',
+    color: colors.textPrimary,
+    flex: 1,
   },
   navLabelActive: {
-    fontWeight: '700',
-    color: colors.primaryNavy,
+    color: '#fff',
   },
   badge: {
-    paddingHorizontal: 4,
-    paddingVertical: 0.5,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
     borderRadius: 2,
-    borderWidth: 1,
-    backgroundColor: colors.bgSurfaceSubtle,
-    borderColor: colors.borderSubtle,
   },
   badgeText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
     fontFamily: 'Roboto Mono, monospace',
-    color: colors.textSecondary,
   },
   footer: {
-    padding: 8,
+    paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: colors.borderSubtle,
-    backgroundColor: colors.bgSurface,
-    gap: 5,
   },
-  primaryActionBtn: {
-    backgroundColor: colors.primaryNavy,
-    paddingVertical: 5,
-    borderRadius: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  primaryActionText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  secondaryActionBtn: {
-    backgroundColor: colors.bgSurface,
-    borderWidth: 1,
-    borderColor: colors.borderDefault,
-    paddingVertical: 5,
-    borderRadius: 3,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-  },
-  secondaryActionText: {
+  footerText: {
+    fontSize: 10,
+    fontWeight: '700',
     color: colors.textPrimary,
-    fontSize: 11,
-    fontWeight: '600',
+  },
+  footerSub: {
+    fontSize: 9.5,
+    color: colors.textMuted,
   },
 });

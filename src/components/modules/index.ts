@@ -1,0 +1,13 @@
+export { SimpleReportsView as AnalyticsModule } from './reports/SimpleReportsView';
+export { SimpleExpenseManagement as EmployeeExpensesModule } from './expenses/SimpleExpenseManagement';
+export { SuppliersView as InvoiceModule } from './suppliers/SuppliersView';
+export { SettingsView as SecurityModule } from './settings/SettingsView';
+export { SimplifiedDashboard as ExecutiveOverview } from './dashboard/SimplifiedDashboard';
+export { StatementAnalysisWorkflow as CategorizationModule } from './statement-analysis/StatementAnalysisWorkflow';
+export { StatementAnalysisWorkflow as BankStatementModule } from './statement-analysis/StatementAnalysisWorkflow';
+export { SuppliersView as VendorModule } from './suppliers/SuppliersView';
+export { SimpleReportsView as ReportsModule } from './reports/SimpleReportsView';
+export { SimpleExpenseManagement as ExpenseManagement } from './expenses/SimpleExpenseManagement';
+export { SimpleBudgetsView as BudgetModule } from './budgets/SimpleBudgetsView';
+export { EmployeeManagementView } from './employees/EmployeeManagementView';
+export { PayrollView } from './payroll/PayrollView';

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal as RNModal } from 'react-native';
-import { X } from 'lucide-react-native';
+import { X } from 'lucide-react';
 import { colors } from '../../theme/colors';
 
 interface DrawerProps {
@@ -8,6 +8,7 @@ interface DrawerProps {
   onClose: () => void;
   title: string;
   subtitle?: string;
+  size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
   footer?: React.ReactNode;
 }
@@ -17,10 +18,13 @@ export const Drawer: React.FC<DrawerProps> = ({
   onClose,
   title,
   subtitle,
+  size = 'md',
   children,
   footer,
 }) => {
   if (!isOpen) return null;
+
+  const drawerWidth = size === 'lg' ? 560 : size === 'sm' ? 360 : 460;
 
   return (
     <RNModal

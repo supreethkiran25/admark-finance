@@ -1,15 +1,17 @@
-export type UserRole = 'COO' | 'CEO' | 'CFO' | 'CTO';
+export type UserRole = 'CFO';
 
 export type ExpenseCategory =
-  | 'Salaries'
-  | 'Office expenses'
-  | 'Software subscriptions'
-  | 'Cloud services'
-  | 'Travel'
+  | 'Cloud Services'
+  | 'Software'
+  | 'Design Tools'
+  | 'Employee Salaries'
+  | 'Office Expenses'
   | 'Food'
+  | 'Travel'
   | 'Marketing'
   | 'Equipment'
   | 'Utilities'
+  | 'Taxes'
   | 'Miscellaneous';
 
 export type Department =
@@ -20,202 +22,131 @@ export type Department =
   | 'Design & Product'
   | 'Facilities & IT';
 
-export type ExpenseStatus = 'Approved' | 'Pending Approval' | 'Under Review' | 'Rejected';
-
-export interface AuditLogEntry {
-  timestamp: string;
-  user: string;
-  role?: UserRole;
-  action: string;
-}
+export type ExpenseStatus = 'Approved' | 'Pending Payment' | 'Rejected';
 
 export interface Expense {
   id: string;
   referenceNumber: string;
   date: string;
-  employee: string;
-  department: Department;
+  rawDate?: string;
+  description: string;
   category: ExpenseCategory;
   amount: number; // in INR (₹)
-  gstAmount: number; // in INR (₹)
-  tdsAmount: number; // in INR (₹)
-  tdsSection?: string; // 194J, 194C, etc.
-  paymentMethod: string;
-  description: string;
-  receiptUrl?: string;
   receiptFileName?: string;
+  receiptDataUrl?: string;
+  receiptFileSize?: string;
   status: ExpenseStatus;
-  isTechExpense: boolean;
-  glCode: string;
-  projectCode?: string;
-  taxAmount: number;
-  gstin?: string;
   notes?: string;
-  auditHistory: AuditLogEntry[];
+  createdAt: string;
 }
 
-export interface BankTransaction {
+export type ReviewTransactionStatus = 'Pending Review' | 'Approved' | 'Needs Verification' | 'Deleted';
+
+export interface ImportedReviewTransaction {
   id: string;
-  statementId: string;
   date: string;
+  rawDate: string;
+  description: string;
   merchant: string;
-  debitAmount: number; // in INR (₹)
-  creditAmount: number; // in INR (₹)
-  accountBalance: number; // in INR (₹)
+  debitAmount: number;
+  creditAmount: number;
+  accountBalance?: number;
+  suggestedCategory: ExpenseCategory;
+  selectedCategory: ExpenseCategory;
   referenceNumber: string;
-  category: ExpenseCategory;
-  reconciliationStatus: 'Matched' | 'Unmatched' | 'Conflict' | 'Auto-Reconciled';
-  matchedExpenseId?: string;
-  ruleConfidence?: number;
-  memo?: string;
-  mode?: 'NEFT' | 'RTGS' | 'IMPS' | 'UPI' | 'POS' | 'ACH';
+  confidence: number;
+  status: ReviewTransactionStatus;
+  validationErrors?: string[];
+  pageNumber?: number;
+  isCustomCategory?: boolean;
 }
 
-export interface BankStatement {
+export interface BankStatementUpload {
   id: string;
   fileName: string;
+  fileType: 'PDF' | 'CSV' | 'Excel';
   bankName: string;
-  accountNumber: string;
-  ifscCode: string;
-  periodStart: string;
-  periodEnd: string;
-  openingBalance: number; // in INR (₹)
-  closingBalance: number; // in INR (₹)
-  totalDebits: number; // in INR (₹)
-  totalCredits: number; // in INR (₹)
-  importedAt: string;
-  importedBy: string;
-  transactionCount: number;
-  reconciledCount: number;
+  accountNumber?: string;
+  uploadedAt: string;
+  totalTransactions: number;
+  totalDebits: number;
+  totalCredits: number;
+  openingBalance: number;
+  closingBalance: number;
+  totalPages?: number;
+  fileDataUrl?: string;
+  rawPagesText?: string[];
 }
 
-export interface CategorizationRule {
+export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract';
+export type EmployeeStatus = 'Active' | 'Inactive';
+export type PayrollStatus = 'Paid' | 'Unpaid' | 'Pending';
+
+export interface SalarySlip {
   id: string;
-  pattern: string;
-  category: ExpenseCategory;
-  department: Department;
-  isRegex: boolean;
-  priority: number;
-  matchCount: number;
-  isActive: boolean;
-  lastMatched?: string;
+  employeeId: string;
+  fiscalMonth: string; // YYYY-MM
+  baseSalary: number; // in INR (₹)
+  allowances: number; // in INR (₹)
+  bonuses: number; // in INR (₹)
+  deductions: number; // in INR (₹)
+  netSalary: number; // in INR (₹)
+  paymentStatus: PayrollStatus;
+  paymentDate?: string;
+  paymentMethod?: string;
+  referenceNumber?: string;
+  notes?: string;
 }
 
-export type ReimbursementType =
-  | 'Travel Reimbursement'
-  | 'Client Meeting'
-  | 'Internet & WFH'
-  | 'Equipment Purchase'
-  | 'Food & Per Diem';
-
-export type ReimbursementStatus = 'Submitted' | 'Under Review' | 'Approved' | 'Disbursed' | 'Rejected';
-
-export interface EmployeeExpenseClaim {
+export interface Employee {
   id: string;
-  claimNumber: string;
-  employeeName: string;
-  employeeEmail: string;
-  employeeRole: string;
+  employeeId: string;
+  fullName: string;
+  email: string;
+  phone: string;
   department: Department;
-  date: string;
-  claimType: ReimbursementType;
-  amount: number; // in INR (₹)
-  receiptAttached: boolean;
-  receiptFileName?: string;
-  status: ReimbursementStatus;
-  description: string;
-  submittedAt: string;
-  approvedBy?: string;
-  approvedAt?: string;
+  position: string;
+  employmentType: EmploymentType;
+  joiningDate: string;
+  monthlySalary: number; // base salary in INR (₹)
+  allowances?: number;
+  bonuses?: number;
+  deductions?: number;
+  status: EmployeeStatus;
+  bankAccountNumber?: string;
+  ifscCode?: string;
+  pan?: string;
+  salaryHistory: SalarySlip[];
 }
 
 export interface DepartmentBudget {
   id: string;
-  department: Department;
+  department: string;
   fiscalMonth: string; // YYYY-MM
   allocatedBudget: number; // in INR (₹)
   spentAmount: number; // in INR (₹)
-  committedAmount: number; // in INR (₹)
   notes?: string;
-  lastUpdated: string;
 }
 
-export interface Vendor {
+export interface Supplier {
   id: string;
   name: string;
   category: ExpenseCategory;
-  department: Department;
   contactEmail: string;
-  paymentTerms: 'Net 15' | 'Net 30' | 'Net 60' | 'Monthly Auto-Debit' | 'Due on Receipt';
-  outstandingBalance: number; // in INR (₹)
-  totalYtdSpend: number; // in INR (₹)
-  contractRenewalDate: string;
-  gstin: string; // Indian GSTIN (e.g. 29AABCU9603R1ZM)
-  pan: string; // Indian PAN
-  tdsApplicable: boolean;
-  tdsRate: number; // e.g. 10%
-  msmeRegistered: boolean;
-  w9OnFile: boolean; // compliance doc on file
-  status: 'Active' | 'Under Review' | 'Paused';
-  paymentMethod: string;
-}
-
-export interface InvoiceLineItem {
-  id: string;
-  description: string;
-  hsnSacCode?: string; // SAC Code e.g. 998314
-  quantity: number;
-  unitPrice: number; // in INR (₹)
-  total: number; // in INR (₹)
-}
-
-export type InvoiceType = 'Accounts Payable' | 'Accounts Receivable';
-export type InvoiceStatus = 'Draft' | 'Sent' | 'Received' | 'Scheduled' | 'Paid' | 'Overdue';
-
-export interface Invoice {
-  id: string;
-  invoiceNumber: string;
-  type: InvoiceType;
-  partyName: string;
-  contactEmail: string;
-  gstin: string;
-  placeOfSupply: string; // e.g. Karnataka (29), Maharashtra (27)
-  issueDate: string;
-  dueDate: string;
-  amount: number; // in INR (₹) - Gross total
-  subtotal: number; // in INR (₹) - Base taxable
-  cgstAmount: number; // in INR (₹)
-  sgstAmount: number; // in INR (₹)
-  igstAmount: number; // in INR (₹)
-  taxAmount: number; // in INR (₹)
-  status: InvoiceStatus;
-  lineItems: InvoiceLineItem[];
-  paymentReference?: string;
-  notes: string;
-  pdfGenerated?: boolean;
-}
-
-export interface AuditRecord {
-  id: string;
-  timestamp: string;
-  user: string;
-  role: UserRole;
-  action: string;
-  entity: string;
-  entityId?: string;
-  details: string;
-  ipAddress: string;
+  paymentTerms: string;
+  pendingPaymentAmount: number; // in INR (₹)
+  totalPaidYTD: number; // in INR (₹)
+  notes?: string;
 }
 
 export type NavigationModule =
-  | 'overview'
+  | 'dashboard'
+  | 'upload-statement'
   | 'expenses'
-  | 'statements'
-  | 'categorization'
+  | 'transactions'
   | 'employees'
+  | 'payroll'
   | 'budgets'
-  | 'vendors'
-  | 'invoices'
+  | 'suppliers'
   | 'reports'
-  | 'analytics'
-  | 'security';
+  | 'settings';

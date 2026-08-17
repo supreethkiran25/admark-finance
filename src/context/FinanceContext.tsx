@@ -1,258 +1,206 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo } from 'react';
 import {
-  UserRole,
-  NavigationModule,
   Expense,
-  ExpenseStatus,
   ExpenseCategory,
-  Department,
-  BankStatement,
-  BankTransaction,
-  CategorizationRule,
+  ImportedReviewTransaction,
+  BankStatementUpload,
   DepartmentBudget,
-  Vendor,
-  Invoice,
-  InvoiceStatus,
-  EmployeeExpenseClaim,
-  ReimbursementStatus,
-  AuditRecord,
+  Supplier,
+  Employee,
+  SalarySlip,
+  PayrollStatus,
+  NavigationModule,
 } from '../types/finance';
 import {
-  INITIAL_EXPENSES,
-  INITIAL_BUDGETS,
-  INITIAL_VENDORS,
-  INITIAL_INVOICES,
-  INITIAL_EMPLOYEE_CLAIMS,
-  INITIAL_AUDIT_LOGS,
-} from '../data/mockData';
-import {
-  SAMPLE_STATEMENT_METADATA,
-  SAMPLE_CHASE_TRANSACTIONS,
-} from '../data/bankStatementSamples';
-import { DEFAULT_RULES, autoCategorizeMerchant } from '../utils/rulesEngine';
+  processBankStatement,
+  StatementExtractionResult,
+  ExtractedStatementRow,
+} from '../utils/statementEngine';
+import { exportToExcel } from '../utils/excelParser';
 
 export interface ToastMessage {
   id: string;
-  type: 'success' | 'info' | 'warning' | 'error';
+  type: 'success' | 'error' | 'info' | 'warning';
   title: string;
-  message?: string;
+  message: string;
 }
 
 interface FinanceContextType {
-  // Navigation & Role
-  currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
+  // Navigation
   activeModule: NavigationModule;
   setActiveModule: (module: NavigationModule) => void;
-  isCompactMode: boolean;
-  setIsCompactMode: (val: boolean | ((prev: boolean) => boolean)) => void;
   isSidebarCollapsed: boolean;
-  setIsSidebarCollapsed: (val: boolean | ((prev: boolean) => boolean)) => void;
-  commandPaletteOpen: boolean;
-  setCommandPaletteOpen: (val: boolean) => void;
+  setIsSidebarCollapsed: (collapsed: boolean) => void;
+  globalSearchQuery: string;
+  setGlobalSearchQuery: (query: string) => void;
 
-  // Expenses CRUD
+  // Bank Statement Extraction Engine & Verification (CORE FEATURE)
+  statements: BankStatementUpload[];
+  activeStatement: BankStatementUpload | null;
+  extractionResult: StatementExtractionResult | null;
+  pendingReviewTransactions: ImportedReviewTransaction[];
+  isAnalyzingStatement: boolean;
+  uploadAndAnalyzeStatement: (file: File, password?: string) => Promise<{ success: boolean; count: number; error?: string }>;
+  updateReviewCategory: (id: string, category: ExpenseCategory) => void;
+  editReviewTransaction: (id: string, updates: Partial<ImportedReviewTransaction>) => void;
+  deleteReviewTransaction: (id: string) => void;
+  batchChangeReviewCategory: (ids: string[], category: ExpenseCategory) => void;
+  approveAndSaveAllReviewTransactions: () => void;
+  approveAndSaveSelectedTransactions: (ids: string[]) => void;
+  discardPendingReview: () => void;
+
+  // Expenses (CRUD)
   expenses: Expense[];
-  addExpense: (expense: Omit<Expense, 'id' | 'referenceNumber' | 'auditHistory'>) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'referenceNumber' | 'createdAt'>) => Expense;
   updateExpense: (id: string, updates: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
-  bulkUpdateExpenseStatus: (ids: string[], status: ExpenseStatus) => void;
-  bulkUpdateExpenseCategory: (ids: string[], category: ExpenseCategory) => void;
-  bulkDeleteExpenses: (ids: string[]) => void;
 
-  // Bank Statements & Transactions
-  statements: BankStatement[];
-  transactions: BankTransaction[];
-  importBankStatement: (
-    meta: Omit<BankStatement, 'id' | 'importedAt' | 'importedBy' | 'transactionCount' | 'reconciledCount'>,
-    txs: Array<Omit<BankTransaction, 'id' | 'statementId'>>
+  // Employees Module (CRUD)
+  employees: Employee[];
+  addEmployee: (employeeData: Omit<Employee, 'id' | 'salaryHistory'>) => Employee;
+  updateEmployee: (id: string, updates: Partial<Employee>) => void;
+  deleteEmployee: (id: string) => void;
+
+  // Payroll Module
+  recordSalaryPayment: (
+    employeeId: string,
+    fiscalMonth: string,
+    paymentDetails: {
+      paymentDate: string;
+      paymentMethod: string;
+      referenceNumber?: string;
+      notes?: string;
+    }
   ) => void;
-  reconcileTransaction: (txId: string, expenseId?: string) => void;
-  autoReconcileAll: () => number;
-  createExpenseFromTransaction: (txId: string) => void;
-
-  // Categorization Rules
-  rules: CategorizationRule[];
-  addRule: (rule: Omit<CategorizationRule, 'id' | 'matchCount'>) => void;
-  updateRule: (id: string, updates: Partial<CategorizationRule>) => void;
-  deleteRule: (id: string) => void;
-  reapplyAllRules: () => void;
+  updateSalaryStatus: (employeeId: string, fiscalMonth: string, status: PayrollStatus, paymentDate?: string) => void;
+  totalMonthlyPayroll: number;
+  salariesPaidThisMonth: number;
+  salariesPendingThisMonth: number;
+  activeEmployeesCount: number;
 
   // Budgets
   budgets: DepartmentBudget[];
-  updateBudget: (id: string, allocated: number, notes?: string) => void;
+  addBudget: (budget: Omit<DepartmentBudget, 'id' | 'spentAmount'>) => void;
+  updateBudget: (id: string, allocatedBudget: number, notes?: string) => void;
+  deleteBudget: (id: string) => void;
 
-  // Vendors
-  vendors: Vendor[];
-  addVendor: (vendor: Omit<Vendor, 'id' | 'totalYtdSpend'>) => void;
-  updateVendor: (id: string, updates: Partial<Vendor>) => void;
-  recordVendorPayment: (vendorId: string, amount: number) => void;
-  payVendor: (vendorId: string, amount: number) => void;
+  // Suppliers (Pending Payments)
+  suppliers: Supplier[];
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'totalPaidYTD'>) => void;
+  updateSupplier: (id: string, updates: Partial<Supplier>) => void;
+  deleteSupplier: (id: string) => void;
+  paySupplier: (supplierId: string, amount: number) => void;
 
-  // Invoices
-  invoices: Invoice[];
-  addInvoice: (inv: Omit<Invoice, 'id'>) => void;
-  updateInvoiceStatus: (id: string, status: InvoiceStatus) => void;
+  // Simplified Dashboard Metrics
+  thisMonthSpending: number;
+  totalTransactionsCount: number;
+  pendingPaymentsTotal: number;
+  largestExpense: number;
+  recentTransactions: Expense[];
 
-  // Employee Claims
-  claims: EmployeeExpenseClaim[];
-  addClaim: (claim: Omit<EmployeeExpenseClaim, 'id' | 'claimNumber' | 'submittedAt'>) => void;
-  updateClaimStatus: (id: string, status: ReimbursementStatus) => void;
-  approveClaim: (id: string) => void;
-  rejectClaim: (id: string) => void;
-
-  // Audit Logs
-  auditLogs: AuditRecord[];
-  logAudit: (action: string, entity: string, details: string, entityId?: string) => void;
-
-  // Toasts
+  // Toasts & Notifications
   toasts: ToastMessage[];
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
 
-  // Computed & Filtered
-  filteredExpenses: Expense[];
-  cashBalance: number;
-  todaySpend: number;
-  weekSpend: number;
-  monthSpend: number;
-  pendingPayablesTotal: number;
-  totalEmployeeExpenseTotal: number;
-  totalVendorExpenseTotal: number;
-  totalMonthlyRevenue: number;
+  // Utilities & Exports
+  exportExpensesExcel: () => void;
+  exportExpensesCSV: () => void;
+  exportPayrollExcel: (fiscalMonth: string) => void;
+  clearAllData: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'OPERATIONS_FINANCE_ERP_STATE_V3';
+const STORAGE_PREFIX = 'CFO_APP_STATE_V2';
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Load from local storage or defaults
-  const [currentRole, setCurrentRole] = useState<UserRole>('COO');
-  const [activeModule, setActiveModule] = useState<NavigationModule>('overview');
-  const [isCompactMode, setIsCompactMode] = useState<boolean>(false);
+  const [activeModule, setActiveModule] = useState<NavigationModule>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState<boolean>(false);
-
-  const [expenses, setExpenses] = useState<Expense[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_EXPENSES`);
-      return saved ? JSON.parse(saved) : INITIAL_EXPENSES;
-    } catch {
-      return INITIAL_EXPENSES;
-    }
-  });
-
-  const [statements, setStatements] = useState<BankStatement[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_STATEMENTS`);
-      return saved ? JSON.parse(saved) : SAMPLE_STATEMENT_METADATA;
-    } catch {
-      return SAMPLE_STATEMENT_METADATA;
-    }
-  });
-
-  const [transactions, setTransactions] = useState<BankTransaction[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_TRANSACTIONS`);
-      return saved ? JSON.parse(saved) : SAMPLE_CHASE_TRANSACTIONS;
-    } catch {
-      return SAMPLE_CHASE_TRANSACTIONS;
-    }
-  });
-
-  const [rules, setRules] = useState<CategorizationRule[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_RULES`);
-      return saved ? JSON.parse(saved) : DEFAULT_RULES;
-    } catch {
-      return DEFAULT_RULES;
-    }
-  });
-
-  const [budgets, setBudgets] = useState<DepartmentBudget[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_BUDGETS`);
-      return saved ? JSON.parse(saved) : INITIAL_BUDGETS;
-    } catch {
-      return INITIAL_BUDGETS;
-    }
-  });
-
-  const [vendors, setVendors] = useState<Vendor[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_VENDORS`);
-      return saved ? JSON.parse(saved) : INITIAL_VENDORS;
-    } catch {
-      return INITIAL_VENDORS;
-    }
-  });
-
-  const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_INVOICES`);
-      return saved ? JSON.parse(saved) : INITIAL_INVOICES;
-    } catch {
-      return INITIAL_INVOICES;
-    }
-  });
-
-  const [claims, setClaims] = useState<EmployeeExpenseClaim[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_CLAIMS`);
-      return saved ? JSON.parse(saved) : INITIAL_EMPLOYEE_CLAIMS;
-    } catch {
-      return INITIAL_EMPLOYEE_CLAIMS;
-    }
-  });
-
-  const [auditLogs, setAuditLogs] = useState<AuditRecord[]>(() => {
-    try {
-      const saved = localStorage.getItem(`${STORAGE_KEY}_AUDIT`);
-      return saved ? JSON.parse(saved) : INITIAL_AUDIT_LOGS;
-    } catch {
-      return INITIAL_AUDIT_LOGS;
-    }
-  });
-
+  const [globalSearchQuery, setGlobalSearchQuery] = useState<string>('');
+  const [isAnalyzingStatement, setIsAnalyzingStatement] = useState<boolean>(false);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_EXPENSES`, JSON.stringify(expenses));
-  }, [expenses]);
+  // 1. Statements & Extraction State
+  const [statements, setStatements] = useState<BankStatementUpload[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_STATEMENTS`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_STATEMENTS`, JSON.stringify(statements));
-  }, [statements]);
+  const [activeStatement, setActiveStatement] = useState<BankStatementUpload | null>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_STATEMENTS`);
+      if (saved) {
+        const list = JSON.parse(saved);
+        return list[0] || null;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_TRANSACTIONS`, JSON.stringify(transactions));
-  }, [transactions]);
+  const [extractionResult, setExtractionResult] = useState<StatementExtractionResult | null>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_EXTRACT_RES`);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_RULES`, JSON.stringify(rules));
-  }, [rules]);
+  const [pendingReviewTransactions, setPendingReviewTransactions] = useState<ImportedReviewTransaction[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_REVIEW_TXS`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_BUDGETS`, JSON.stringify(budgets));
-  }, [budgets]);
+  // 2. Expenses State
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_EXPENSES`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_VENDORS`, JSON.stringify(vendors));
-  }, [vendors]);
+  // 3. Employees State
+  const [employees, setEmployees] = useState<Employee[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_EMPLOYEES`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_INVOICES`, JSON.stringify(invoices));
-  }, [invoices]);
+  // 4. Budgets State
+  const [budgets, setBudgets] = useState<DepartmentBudget[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_BUDGETS`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_CLAIMS`, JSON.stringify(claims));
-  }, [claims]);
-
-  useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_AUDIT`, JSON.stringify(auditLogs));
-  }, [auditLogs]);
+  // 5. Suppliers State
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_PREFIX}_SUPPLIERS`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   // Toast Helper
   const addToast = (toast: Omit<ToastMessage, 'id'>) => {
@@ -267,579 +215,835 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // Audit Logger Helper
-  const logAudit = (action: string, entity: string, details: string, entityId?: string) => {
-    const newRecord: AuditRecord = {
-      id: `aud-${Date.now()}`,
-      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      user: currentRole === 'COO' ? 'Rachel Green (COO)' : currentRole === 'CTO' ? 'Alex Rivera (CTO)' : currentRole === 'CEO' ? 'David Vance (CEO)' : 'Marcus Cole (CFO)',
-      role: currentRole,
-      action,
-      entity,
-      entityId,
-      details,
-      ipAddress: '192.168.1.45',
-    };
-    setAuditLogs(prev => [newRecord, ...prev]);
+  // Sync to localStorage
+  const saveState = (key: string, data: any) => {
+    try {
+      localStorage.setItem(`${STORAGE_PREFIX}_${key}`, JSON.stringify(data));
+    } catch (e) {
+      console.error('Storage sync error', e);
+    }
   };
 
-  // Expenses Operations
-  const addExpense = (newExpData: Omit<Expense, 'id' | 'referenceNumber' | 'auditHistory'>) => {
-    const seq = expenses.length + 800 + 1;
-    const ref = `EXP-2026-${seq}`;
-    const newExp: Expense = {
-      ...newExpData,
-      id: `exp-${Date.now()}`,
-      referenceNumber: ref,
-      auditHistory: [
-        {
-          timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          user: `${currentRole} User`,
-          role: currentRole,
-          action: 'Created expense entry',
-        },
-      ],
-    };
+  // REAL-TIME DASHBOARD CALCULATIONS
+  const currentYearMonth = new Date().toISOString().substring(0, 7);
 
-    setExpenses(prev => [newExp, ...prev]);
-    logAudit('CREATE_EXPENSE', `Expense ${ref}`, `Logged expense of $${newExp.amount.toFixed(2)} for ${newExp.description}`, newExp.id);
-    addToast({
-      type: 'success',
-      title: 'Expense Recorded',
-      message: `${ref} ($${newExp.amount.toFixed(2)}) recorded successfully.`,
+  const thisMonthExpenses = useMemo(() => {
+    return expenses.filter(e => e.date.startsWith(currentYearMonth) && e.status === 'Approved');
+  }, [expenses, currentYearMonth]);
+
+  const thisMonthSpending = useMemo(() => {
+    return thisMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+  }, [thisMonthExpenses]);
+
+  const totalTransactionsCount = expenses.length;
+
+  const pendingPaymentsTotal = useMemo(() => {
+    return suppliers.reduce((sum, s) => sum + (s.pendingPaymentAmount || 0), 0);
+  }, [suppliers]);
+
+  const largestExpense = useMemo(() => {
+    if (thisMonthExpenses.length === 0) return 0;
+    return Math.max(...thisMonthExpenses.map(e => e.amount));
+  }, [thisMonthExpenses]);
+
+  const recentTransactions = useMemo(() => {
+    return [...expenses]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 8);
+  }, [expenses]);
+
+  // REAL-TIME PAYROLL CALCULATIONS
+  const activeEmployees = useMemo(() => {
+    return employees.filter(e => e.status === 'Active');
+  }, [employees]);
+
+  const activeEmployeesCount = activeEmployees.length;
+
+  const totalMonthlyPayroll = useMemo(() => {
+    return activeEmployees.reduce((sum, e) => {
+      const base = e.monthlySalary || 0;
+      const allowances = e.allowances || 0;
+      const bonuses = e.bonuses || 0;
+      const deductions = e.deductions || 0;
+      return sum + (base + allowances + bonuses - deductions);
+    }, 0);
+  }, [activeEmployees]);
+
+  const salariesPaidThisMonth = useMemo(() => {
+    let sum = 0;
+    employees.forEach(emp => {
+      emp.salaryHistory.forEach(slip => {
+        if (slip.fiscalMonth === currentYearMonth && slip.paymentStatus === 'Paid') {
+          sum += slip.netSalary;
+        }
+      });
+    });
+    return sum;
+  }, [employees, currentYearMonth]);
+
+  const salariesPendingThisMonth = useMemo(() => {
+    return Math.max(0, totalMonthlyPayroll - salariesPaidThisMonth);
+  }, [totalMonthlyPayroll, salariesPaidThisMonth]);
+
+  // CORE WORKFLOW: REBUILT BANK STATEMENT EXTRACTION ENGINE
+  const uploadAndAnalyzeStatement = async (
+    file: File,
+    password?: string
+  ): Promise<{ success: boolean; count: number; error?: string }> => {
+    setIsAnalyzingStatement(true);
+
+    try {
+      const result = await processBankStatement(file, password);
+      setExtractionResult(result);
+      saveState('EXTRACT_RES', result);
+
+      // Convert ExtractedStatementRow[] to ImportedReviewTransaction[]
+      const reviewTxs: ImportedReviewTransaction[] = result.rows.map((r, idx) => ({
+        id: r.id || `rev-${Date.now()}-${idx}`,
+        date: r.date,
+        rawDate: r.rawDate,
+        description: r.description,
+        merchant: r.merchant,
+        debitAmount: r.debitAmount,
+        creditAmount: r.creditAmount,
+        accountBalance: r.runningBalance,
+        suggestedCategory: r.suggestedCategory,
+        selectedCategory: r.selectedCategory,
+        referenceNumber: r.referenceNumber,
+        confidence: r.confidenceScore,
+        status: !r.isValid || r.validationMessages.length > 0 ? 'Needs Verification' : 'Pending Review',
+        validationErrors: r.validationMessages,
+        pageNumber: r.pageNumber,
+      }));
+
+      const newStatementUpload: BankStatementUpload = {
+        id: `stmt-${Date.now()}`,
+        fileName: result.fileName,
+        fileType: result.fileType,
+        bankName: result.summary.bankName,
+        accountNumber: result.summary.accountNumber,
+        uploadedAt: new Date().toISOString(),
+        totalTransactions: reviewTxs.length,
+        totalDebits: result.summary.calculatedTotalDebits,
+        totalCredits: result.summary.calculatedTotalCredits,
+        openingBalance: result.summary.openingBalance || 0,
+        closingBalance: result.summary.closingBalance || 0,
+        totalPages: result.summary.totalPages,
+        fileDataUrl: result.fileDataUrl,
+        rawPagesText: result.rawPagesText,
+      };
+
+      setActiveStatement(newStatementUpload);
+      setStatements(prev => {
+        const updated = [newStatementUpload, ...prev];
+        saveState('STATEMENTS', updated);
+        return updated;
+      });
+
+      setPendingReviewTransactions(reviewTxs);
+      saveState('REVIEW_TXS', reviewTxs);
+
+      setActiveModule('upload-statement');
+
+      addToast({
+        type: 'success',
+        title: `${result.summary.bankName} Analyzed`,
+        message: `Extracted ${reviewTxs.length} exact transaction rows across ${result.summary.totalPages} page(s).`,
+      });
+
+      return { success: true, count: reviewTxs.length };
+    } catch (err: any) {
+      const errMsg = err?.message || 'Failed to extract statement data. Please verify password or file structure.';
+      addToast({
+        type: 'error',
+        title: 'Extraction Error',
+        message: errMsg,
+      });
+      return { success: false, count: 0, error: errMsg };
+    } finally {
+      setIsAnalyzingStatement(false);
+    }
+  };
+
+  // REVIEW & MANUAL CORRECTION
+  const updateReviewCategory = (id: string, category: ExpenseCategory) => {
+    setPendingReviewTransactions(prev => {
+      const updated = prev.map(t =>
+        t.id === id ? { ...t, selectedCategory: category, isCustomCategory: true } : t
+      );
+      saveState('REVIEW_TXS', updated);
+      return updated;
     });
   };
 
-  const updateExpense = (id: string, updates: Partial<Expense>) => {
-    setExpenses(prev =>
-      prev.map(exp => {
-        if (exp.id === id) {
-          const updated = { ...exp, ...updates };
-          const logEntry = {
-            timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            user: `${currentRole} User`,
-            role: currentRole,
-            action: `Modified fields: ${Object.keys(updates).join(', ')}`,
-          };
-          updated.auditHistory = [logEntry, ...(exp.auditHistory || [])];
-          return updated;
+  const editReviewTransaction = (id: string, updates: Partial<ImportedReviewTransaction>) => {
+    setPendingReviewTransactions(prev => {
+      const updated = prev.map(t => {
+        if (t.id === id) {
+          const merged = { ...t, ...updates };
+          if (merged.debitAmount > 0 || merged.creditAmount > 0) {
+            merged.status = 'Pending Review';
+            merged.validationErrors = [];
+          }
+          return merged;
         }
-        return exp;
-      })
-    );
-    logAudit('UPDATE_EXPENSE', `Expense ${id}`, `Updated fields: ${Object.keys(updates).join(', ')}`, id);
+        return t;
+      });
+      saveState('REVIEW_TXS', updated);
+      return updated;
+    });
+
+    addToast({
+      type: 'info',
+      title: 'Row Corrected',
+      message: 'Transaction fields updated manually.',
+    });
+  };
+
+  const deleteReviewTransaction = (id: string) => {
+    setPendingReviewTransactions(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      saveState('REVIEW_TXS', updated);
+      return updated;
+    });
+    addToast({
+      type: 'info',
+      title: 'Row Removed',
+      message: 'Transaction discarded from review queue.',
+    });
+  };
+
+  const batchChangeReviewCategory = (ids: string[], category: ExpenseCategory) => {
+    setPendingReviewTransactions(prev => {
+      const updated = prev.map(t =>
+        ids.includes(t.id) ? { ...t, selectedCategory: category, isCustomCategory: true } : t
+      );
+      saveState('REVIEW_TXS', updated);
+      return updated;
+    });
+    addToast({
+      type: 'success',
+      title: 'Category Updated',
+      message: `Updated category for ${ids.length} transactions to ${category}.`,
+    });
+  };
+
+  const approveAndSaveAllReviewTransactions = () => {
+    if (pendingReviewTransactions.length === 0) return;
+
+    const newExpenses: Expense[] = pendingReviewTransactions
+      .filter(t => t.debitAmount > 0)
+      .map((t, idx) => ({
+        id: `exp-${Date.now()}-${idx}`,
+        referenceNumber: t.referenceNumber || `EXP-${new Date().getFullYear()}-${String(expenses.length + idx + 1).padStart(4, '0')}`,
+        date: t.date,
+        rawDate: t.rawDate,
+        description: t.description || t.merchant,
+        category: t.selectedCategory,
+        amount: t.debitAmount,
+        status: 'Approved',
+        notes: `Extracted from statement: ${t.merchant}`,
+        createdAt: new Date().toISOString(),
+      }));
+
+    setExpenses(prev => {
+      const updated = [...newExpenses, ...prev];
+      saveState('EXPENSES', updated);
+      return updated;
+    });
+
+    // Auto-match salary payments if any
+    pendingReviewTransactions.forEach(t => {
+      if (t.selectedCategory === 'Employee Salaries' || /salary|payroll/i.test(t.description)) {
+        const matchingEmp = employees.find(
+          e => e.status === 'Active' && (t.description.toLowerCase().includes(e.fullName.toLowerCase()) || Math.abs(e.monthlySalary - t.debitAmount) < 10)
+        );
+        if (matchingEmp) {
+          const month = t.date.substring(0, 7);
+          updateSalaryStatus(matchingEmp.id, month, 'Paid', t.date);
+        }
+      }
+    });
+
+    setPendingReviewTransactions([]);
+    saveState('REVIEW_TXS', []);
+
+    addToast({
+      type: 'success',
+      title: 'Transactions Saved',
+      message: `Saved ${newExpenses.length} exact verified transactions to official expenses.`,
+    });
+
+    setActiveModule('expenses');
+  };
+
+  const approveAndSaveSelectedTransactions = (ids: string[]) => {
+    const toSave = pendingReviewTransactions.filter(t => ids.includes(t.id) && t.debitAmount > 0);
+    if (toSave.length === 0) return;
+
+    const newExpenses: Expense[] = toSave.map((t, idx) => ({
+      id: `exp-${Date.now()}-${idx}`,
+      referenceNumber: t.referenceNumber || `EXP-${new Date().getFullYear()}-${String(expenses.length + idx + 1).padStart(4, '0')}`,
+      date: t.date,
+      rawDate: t.rawDate,
+      description: t.description || t.merchant,
+      category: t.selectedCategory,
+      amount: t.debitAmount,
+      status: 'Approved',
+      notes: `Extracted from statement: ${t.merchant}`,
+      createdAt: new Date().toISOString(),
+    }));
+
+    setExpenses(prev => {
+      const updated = [...newExpenses, ...prev];
+      saveState('EXPENSES', updated);
+      return updated;
+    });
+
+    setPendingReviewTransactions(prev => {
+      const remaining = prev.filter(t => !ids.includes(t.id));
+      saveState('REVIEW_TXS', remaining);
+      return remaining;
+    });
+
+    addToast({
+      type: 'success',
+      title: 'Items Saved',
+      message: `Saved ${newExpenses.length} verified transactions to expenses.`,
+    });
+  };
+
+  const discardPendingReview = () => {
+    setPendingReviewTransactions([]);
+    setExtractionResult(null);
+    saveState('REVIEW_TXS', []);
+    saveState('EXTRACT_RES', null);
+    addToast({
+      type: 'info',
+      title: 'Review Cleared',
+      message: 'Pending statement review queue has been cleared.',
+    });
+  };
+
+  // EXPENSES CRUD
+  const addExpense = (expenseData: Omit<Expense, 'id' | 'referenceNumber' | 'createdAt'>): Expense => {
+    const newRef = `EXP-${new Date().getFullYear()}-${String(expenses.length + 1).padStart(4, '0')}`;
+    const newExpense: Expense = {
+      ...expenseData,
+      id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      referenceNumber: newRef,
+      createdAt: new Date().toISOString(),
+    };
+
+    setExpenses(prev => {
+      const updated = [newExpense, ...prev];
+      saveState('EXPENSES', updated);
+      return updated;
+    });
+
+    addToast({
+      type: 'success',
+      title: 'Expense Added',
+      message: `${newExpense.referenceNumber} recorded.`,
+    });
+
+    return newExpense;
+  };
+
+  const updateExpense = (id: string, updates: Partial<Expense>) => {
+    setExpenses(prev => {
+      const updated = prev.map(e => (e.id === id ? { ...e, ...updates } : e));
+      saveState('EXPENSES', updated);
+      return updated;
+    });
+
     addToast({
       type: 'info',
       title: 'Expense Updated',
-      message: `Changes saved for transaction.`,
+      message: 'Changes saved.',
     });
   };
 
   const deleteExpense = (id: string) => {
-    const target = expenses.find(e => e.id === id);
-    setExpenses(prev => prev.filter(e => e.id !== id));
-    logAudit('DELETE_EXPENSE', `Expense ${target?.referenceNumber || id}`, `Deleted expense record`, id);
+    setExpenses(prev => {
+      const updated = prev.filter(e => e.id !== id);
+      saveState('EXPENSES', updated);
+      return updated;
+    });
+
     addToast({
       type: 'warning',
-      title: 'Expense Removed',
-      message: `Record ${target?.referenceNumber || id} deleted.`,
+      title: 'Expense Deleted',
+      message: 'Expense removed.',
     });
   };
 
-  const bulkUpdateExpenseStatus = (ids: string[], status: ExpenseStatus) => {
-    setExpenses(prev =>
-      prev.map(exp => {
-        if (ids.includes(exp.id)) {
-          return {
-            ...exp,
-            status,
-            auditHistory: [
-              {
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                user: `${currentRole} User`,
-                role: currentRole,
-                action: `Status changed to ${status}`,
-              },
-              ...exp.auditHistory,
-            ],
-          };
-        }
-        return exp;
-      })
-    );
-    logAudit('BULK_STATUS_CHANGE', `${ids.length} Expenses`, `Updated status to ${status}`);
+  // EMPLOYEES CRUD
+  const addEmployee = (employeeData: Omit<Employee, 'id' | 'salaryHistory'>): Employee => {
+    const newEmp: Employee = {
+      ...employeeData,
+      id: `emp-${Date.now()}`,
+      allowances: employeeData.allowances || 0,
+      bonuses: employeeData.bonuses || 0,
+      deductions: employeeData.deductions || 0,
+      salaryHistory: [],
+    };
+
+    setEmployees(prev => {
+      const updated = [newEmp, ...prev];
+      saveState('EMPLOYEES', updated);
+      return updated;
+    });
+
     addToast({
       type: 'success',
-      title: 'Batch Action Complete',
-      message: `Updated status of ${ids.length} expense(s) to ${status}.`,
+      title: 'Employee Added',
+      message: `${newEmp.fullName} (${newEmp.position}) registered.`,
     });
+
+    return newEmp;
   };
 
-  const bulkUpdateExpenseCategory = (ids: string[], category: ExpenseCategory) => {
-    setExpenses(prev =>
-      prev.map(exp => {
-        if (ids.includes(exp.id)) {
-          return {
-            ...exp,
-            category,
-            auditHistory: [
-              {
-                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                user: `${currentRole} User`,
-                role: currentRole,
-                action: `Category recategorized to ${category}`,
-              },
-              ...exp.auditHistory,
-            ],
-          };
-        }
-        return exp;
-      })
-    );
-    logAudit('BULK_RECATEGORIZE', `${ids.length} Expenses`, `Recategorized to ${category}`);
+  const updateEmployee = (id: string, updates: Partial<Employee>) => {
+    setEmployees(prev => {
+      const updated = prev.map(e => (e.id === id ? { ...e, ...updates } : e));
+      saveState('EMPLOYEES', updated);
+      return updated;
+    });
+
     addToast({
       type: 'info',
-      title: 'Category Updated',
-      message: `Recategorized ${ids.length} expense(s) to ${category}.`,
+      title: 'Employee Updated',
+      message: 'Employee record updated.',
     });
   };
 
-  const bulkDeleteExpenses = (ids: string[]) => {
-    setExpenses(prev => prev.filter(e => !ids.includes(e.id)));
-    logAudit('BULK_DELETE_EXPENSES', `${ids.length} Expenses`, `Deleted ${ids.length} expense records`);
+  const deleteEmployee = (id: string) => {
+    setEmployees(prev => {
+      const updated = prev.filter(e => e.id !== id);
+      saveState('EMPLOYEES', updated);
+      return updated;
+    });
+
     addToast({
       type: 'warning',
-      title: 'Expenses Deleted',
-      message: `Removed ${ids.length} selected expense(s).`,
+      title: 'Employee Removed',
+      message: 'Employee removed from registry.',
     });
   };
 
-  // Bank Statement Import
-  const importBankStatement = (
-    meta: Omit<BankStatement, 'id' | 'importedAt' | 'importedBy' | 'transactionCount' | 'reconciledCount'>,
-    txs: Array<Omit<BankTransaction, 'id' | 'statementId'>>
+  // PAYROLL MANAGEMENT
+  const recordSalaryPayment = (
+    employeeId: string,
+    fiscalMonth: string,
+    paymentDetails: {
+      paymentDate: string;
+      paymentMethod: string;
+      referenceNumber?: string;
+      notes?: string;
+    }
   ) => {
-    const stmtId = `stmt-${Date.now()}`;
-    const newStatement: BankStatement = {
-      ...meta,
-      id: stmtId,
-      importedAt: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      importedBy: `${currentRole} User`,
-      transactionCount: txs.length,
-      reconciledCount: 0,
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
+
+    const base = emp.monthlySalary || 0;
+    const allowances = emp.allowances || 0;
+    const bonuses = emp.bonuses || 0;
+    const deductions = emp.deductions || 0;
+    const net = base + allowances + bonuses - deductions;
+
+    const newSlip: SalarySlip = {
+      id: `slip-${Date.now()}`,
+      employeeId,
+      fiscalMonth,
+      baseSalary: base,
+      allowances,
+      bonuses,
+      deductions,
+      netSalary: net,
+      paymentStatus: 'Paid',
+      paymentDate: paymentDetails.paymentDate,
+      paymentMethod: paymentDetails.paymentMethod,
+      referenceNumber: paymentDetails.referenceNumber || `PAY-${fiscalMonth}-${emp.employeeId}`,
+      notes: paymentDetails.notes,
     };
 
-    const newTransactions: BankTransaction[] = txs.map((t, idx) => ({
-      ...t,
-      id: `tx-${Date.now()}-${idx}`,
-      statementId: stmtId,
-    }));
-
-    setStatements(prev => [newStatement, ...prev]);
-    setTransactions(prev => [...newTransactions, ...prev]);
-    logAudit('IMPORT_STATEMENT', `Bank Statement ${meta.fileName}`, `Imported ${txs.length} transactions totaling $${meta.totalDebits.toFixed(2)} debits.`);
-    addToast({
-      type: 'success',
-      title: 'Statement Imported',
-      message: `Loaded ${txs.length} transactions from ${meta.fileName}.`,
-    });
-  };
-
-  const reconcileTransaction = (txId: string, expenseId?: string) => {
-    setTransactions(prev =>
-      prev.map(tx => {
-        if (tx.id === txId) {
+    setEmployees(prev => {
+      const updated = prev.map(e => {
+        if (e.id === employeeId) {
+          const existingHistory = e.salaryHistory.filter(s => s.fiscalMonth !== fiscalMonth);
           return {
-            ...tx,
-            reconciliationStatus: 'Matched',
-            matchedExpenseId: expenseId || tx.matchedExpenseId,
+            ...e,
+            salaryHistory: [newSlip, ...existingHistory],
           };
         }
-        return tx;
-      })
-    );
-    logAudit('RECONCILE_TRANSACTION', `Transaction ${txId}`, `Reconciled with ledger expense`);
-    addToast({
-      type: 'success',
-      title: 'Transaction Reconciled',
-      message: `Bank line reconciled with ledger.`,
-    });
-  };
-
-  const autoReconcileAll = (): number => {
-    let matchedCount = 0;
-    const updatedTxs = transactions.map(tx => {
-      if (tx.reconciliationStatus === 'Matched' || tx.reconciliationStatus === 'Auto-Reconciled') {
-        return tx;
-      }
-      // Attempt exact amount and date match against expenses
-      const candidate = expenses.find(
-        e => Math.abs(e.amount - tx.debitAmount) < 0.01 && e.status === 'Approved'
-      );
-      if (candidate) {
-        matchedCount++;
-        return {
-          ...tx,
-          reconciliationStatus: 'Auto-Reconciled' as const,
-          matchedExpenseId: candidate.id,
-        };
-      }
-      return tx;
+        return e;
+      });
+      saveState('EMPLOYEES', updated);
+      return updated;
     });
 
-    setTransactions(updatedTxs);
-    logAudit('AUTO_RECONCILE', 'Bank Statements', `Auto-reconciled ${matchedCount} transactions.`);
-    addToast({
-      type: 'success',
-      title: 'Auto-Reconciliation Complete',
-      message: `Successfully reconciled ${matchedCount} matching transactions.`,
-    });
-    return matchedCount;
-  };
-
-  const createExpenseFromTransaction = (txId: string) => {
-    const tx = transactions.find(t => t.id === txId);
-    if (!tx) return;
-
-    const catResult = autoCategorizeMerchant(tx.merchant, rules);
     addExpense({
-      date: tx.date,
-      employee: 'Rachel Green',
-      department: catResult.department,
-      category: catResult.category,
-      amount: tx.debitAmount > 0 ? tx.debitAmount : tx.creditAmount,
-      gstAmount: 0,
-      tdsAmount: 0,
-      paymentMethod: 'Corporate Card / Bank Debit',
-      description: tx.merchant,
+      date: paymentDetails.paymentDate,
+      description: `Salary Disbursement: ${emp.fullName} (${emp.employeeId}) - ${fiscalMonth}`,
+      category: 'Employee Salaries',
+      amount: net,
       status: 'Approved',
-      isTechExpense: ['Cloud services', 'Software subscriptions', 'Equipment'].includes(catResult.category),
-      glCode: `GL-${catResult.category.substring(0, 4).toUpperCase()}-AUTO`,
-      taxAmount: 0.0,
-      notes: `Generated from unmatched bank transaction ${tx.referenceNumber}`,
+      notes: `Payroll for ${fiscalMonth} via ${paymentDetails.paymentMethod} (Ref: ${newSlip.referenceNumber})`,
     });
 
-    // Mark reconciled
-    reconcileTransaction(txId);
-  };
-
-  // Rules Engine
-  const addRule = (newRuleData: Omit<CategorizationRule, 'id' | 'matchCount'>) => {
-    const newRule: CategorizationRule = {
-      ...newRuleData,
-      id: `rule-${Date.now()}`,
-      matchCount: 0,
-    };
-    setRules(prev => [newRule, ...prev]);
-    logAudit('CREATE_RULE', `Rule ${newRule.pattern}`, `Added automatic categorization rule.`);
     addToast({
       type: 'success',
-      title: 'Rule Created',
-      message: `Rule for "${newRule.pattern}" added.`,
+      title: 'Salary Disbursed',
+      message: `Recorded ₹${net.toLocaleString('en-IN')} paid to ${emp.fullName} for ${fiscalMonth}.`,
     });
   };
 
-  const updateRule = (id: string, updates: Partial<CategorizationRule>) => {
-    setRules(prev => prev.map(r => (r.id === id ? { ...r, ...updates } : r)));
-    logAudit('UPDATE_RULE', `Rule ${id}`, `Updated rule parameters.`);
-  };
+  const updateSalaryStatus = (
+    employeeId: string,
+    fiscalMonth: string,
+    status: PayrollStatus,
+    paymentDate?: string
+  ) => {
+    const emp = employees.find(e => e.id === employeeId);
+    if (!emp) return;
 
-  const deleteRule = (id: string) => {
-    setRules(prev => prev.filter(r => r.id !== id));
-    logAudit('DELETE_RULE', `Rule ${id}`, `Deleted rule.`);
-    addToast({
-      type: 'info',
-      title: 'Rule Deleted',
-      message: 'Categorization rule removed.',
-    });
-  };
+    const base = emp.monthlySalary || 0;
+    const allowances = emp.allowances || 0;
+    const bonuses = emp.bonuses || 0;
+    const deductions = emp.deductions || 0;
+    const net = base + allowances + bonuses - deductions;
 
-  const reapplyAllRules = () => {
-    let changed = 0;
-    const updatedExpenses = expenses.map(exp => {
-      const res = autoCategorizeMerchant(exp.description, rules);
-      if (res.category !== exp.category && res.confidence >= 0.9) {
-        changed++;
-        return {
-          ...exp,
-          category: res.category,
-          department: res.department,
-        };
-      }
-      return exp;
-    });
-
-    setExpenses(updatedExpenses);
-    logAudit('REAPPLY_RULES', 'Expense Ledger', `Re-applied rules across ${expenses.length} expenses; ${changed} updated.`);
-    addToast({
-      type: 'info',
-      title: 'Rules Applied',
-      message: `Re-evaluated rules. Updated categories for ${changed} items.`,
-    });
-  };
-
-  // Budgets
-  const updateBudget = (id: string, allocated: number, notes?: string) => {
-    setBudgets(prev =>
-      prev.map(b => (b.id === id ? { ...b, allocatedBudget: allocated, notes: notes ?? b.notes, lastUpdated: new Date().toISOString().split('T')[0] } : b))
-    );
-    logAudit('UPDATE_BUDGET', `Budget ${id}`, `Adjusted allocation to $${allocated.toFixed(2)}.`);
-    addToast({
-      type: 'success',
-      title: 'Budget Updated',
-      message: `Department budget allocation saved.`,
-    });
-  };
-
-  // Vendors
-  const addVendor = (vData: Omit<Vendor, 'id' | 'totalYtdSpend'>) => {
-    const newVendor: Vendor = {
-      ...vData,
-      id: `vnd-${Date.now()}`,
-      totalYtdSpend: 0,
-    };
-    setVendors(prev => [newVendor, ...prev]);
-    logAudit('CREATE_VENDOR', `Vendor ${newVendor.name}`, `Added vendor with payment terms ${newVendor.paymentTerms}.`);
-    addToast({
-      type: 'success',
-      title: 'Vendor Added',
-      message: `${newVendor.name} added to vendor directory.`,
-    });
-  };
-
-  const updateVendor = (id: string, updates: Partial<Vendor>) => {
-    setVendors(prev => prev.map(v => (v.id === id ? { ...v, ...updates } : v)));
-    logAudit('UPDATE_VENDOR', `Vendor ${id}`, `Updated vendor profile.`);
-    addToast({
-      type: 'info',
-      title: 'Vendor Saved',
-      message: `Vendor details updated.`,
-    });
-  };
-
-  const recordVendorPayment = (vendorId: string, amount: number) => {
-    const target = vendors.find(v => v.id === vendorId);
-    if (!target) return;
-
-    setVendors(prev =>
-      prev.map(v => {
-        if (v.id === vendorId) {
-          return {
-            ...v,
-            outstandingBalance: Math.max(0, v.outstandingBalance - amount),
-            totalYtdSpend: v.totalYtdSpend + amount,
-          };
+    setEmployees(prev => {
+      const updated = prev.map(e => {
+        if (e.id === employeeId) {
+          const existingSlip = e.salaryHistory.find(s => s.fiscalMonth === fiscalMonth);
+          if (existingSlip) {
+            const updatedHistory = e.salaryHistory.map(s =>
+              s.fiscalMonth === fiscalMonth
+                ? { ...s, paymentStatus: status, paymentDate: paymentDate || s.paymentDate }
+                : s
+            );
+            return { ...e, salaryHistory: updatedHistory };
+          } else {
+            const newSlip: SalarySlip = {
+              id: `slip-${Date.now()}`,
+              employeeId,
+              fiscalMonth,
+              baseSalary: base,
+              allowances,
+              bonuses,
+              deductions,
+              netSalary: net,
+              paymentStatus: status,
+              paymentDate: paymentDate || (status === 'Paid' ? new Date().toISOString().split('T')[0] : undefined),
+              referenceNumber: `PAY-${fiscalMonth}-${e.employeeId}`,
+            };
+            return { ...e, salaryHistory: [newSlip, ...e.salaryHistory] };
+          }
         }
-        return v;
-      })
-    );
+        return e;
+      });
+      saveState('EMPLOYEES', updated);
+      return updated;
+    });
 
-    // Create an expense
+    if (status === 'Paid') {
+      const alreadyHasExpense = expenses.some(
+        exp => exp.category === 'Employee Salaries' && exp.description.includes(emp.employeeId) && exp.description.includes(fiscalMonth)
+      );
+
+      if (!alreadyHasExpense) {
+        addExpense({
+          date: paymentDate || new Date().toISOString().split('T')[0],
+          description: `Salary Payment: ${emp.fullName} (${emp.employeeId}) - ${fiscalMonth}`,
+          category: 'Employee Salaries',
+          amount: net,
+          status: 'Approved',
+          notes: `Payroll tracker for ${fiscalMonth}`,
+        });
+      }
+    }
+  };
+
+  // BUDGETS CRUD
+  const addBudget = (budgetData: Omit<DepartmentBudget, 'id' | 'spentAmount'>) => {
+    const newBudget: DepartmentBudget = {
+      ...budgetData,
+      id: `bgt-${Date.now()}`,
+      spentAmount: 0,
+    };
+
+    setBudgets(prev => {
+      const updated = [newBudget, ...prev];
+      saveState('BUDGETS', updated);
+      return updated;
+    });
+
+    addToast({
+      type: 'success',
+      title: 'Budget Created',
+      message: `Budget set for ${newBudget.department}.`,
+    });
+  };
+
+  const updateBudget = (id: string, allocatedBudget: number, notes?: string) => {
+    setBudgets(prev => {
+      const updated = prev.map(b => (b.id === id ? { ...b, allocatedBudget, notes: notes ?? b.notes } : b));
+      saveState('BUDGETS', updated);
+      return updated;
+    });
+  };
+
+  const deleteBudget = (id: string) => {
+    setBudgets(prev => {
+      const updated = prev.filter(b => b.id !== id);
+      saveState('BUDGETS', updated);
+      return updated;
+    });
+  };
+
+  // SUPPLIERS CRUD
+  const addSupplier = (supplierData: Omit<Supplier, 'id' | 'totalPaidYTD'>) => {
+    const newSupplier: Supplier = {
+      ...supplierData,
+      id: `sup-${Date.now()}`,
+      totalPaidYTD: 0,
+    };
+
+    setSuppliers(prev => {
+      const updated = [newSupplier, ...prev];
+      saveState('SUPPLIERS', updated);
+      return updated;
+    });
+
+    addToast({
+      type: 'success',
+      title: 'Supplier Added',
+      message: `${newSupplier.name} added.`,
+    });
+  };
+
+  const updateSupplier = (id: string, updates: Partial<Supplier>) => {
+    setSuppliers(prev => {
+      const updated = prev.map(s => (s.id === id ? { ...s, ...updates } : s));
+      saveState('SUPPLIERS', updated);
+      return updated;
+    });
+  };
+
+  const deleteSupplier = (id: string) => {
+    setSuppliers(prev => {
+      const updated = prev.filter(s => s.id !== id);
+      saveState('SUPPLIERS', updated);
+      return updated;
+    });
+  };
+
+  const paySupplier = (supplierId: string, amount: number) => {
+    const supplier = suppliers.find(s => s.id === supplierId);
+    if (!supplier) return;
+
     addExpense({
       date: new Date().toISOString().split('T')[0],
-      employee: 'Rachel Green',
-      department: target.department,
-      category: target.category,
+      description: `Payment to ${supplier.name}`,
+      category: supplier.category,
       amount,
-      gstAmount: 0,
-      tdsAmount: 0,
-      paymentMethod: target.paymentMethod,
-      description: `Payment Disbursement - ${target.name}`,
       status: 'Approved',
-      isTechExpense: ['Cloud services', 'Software subscriptions', 'Equipment'].includes(target.category),
-      glCode: `GL-AP-${target.name.substring(0, 4).toUpperCase()}`,
-      taxAmount: 0.0,
-      notes: `AP Settlement on ${target.paymentTerms}`,
+      notes: `Supplier payment for ${supplier.name}`,
     });
 
-    logAudit('VENDOR_PAYMENT', `Vendor ${target.name}`, `Disbursed AP payment of $${amount.toFixed(2)}.`);
-  };
+    setSuppliers(prev => {
+      const updated = prev.map(s =>
+        s.id === supplierId
+          ? {
+              ...s,
+              pendingPaymentAmount: Math.max(0, s.pendingPaymentAmount - amount),
+              totalPaidYTD: s.totalPaidYTD + amount,
+            }
+          : s
+      );
+      saveState('SUPPLIERS', updated);
+      return updated;
+    });
 
-  // Invoices
-  const addInvoice = (invData: Omit<Invoice, 'id'>) => {
-    const newInv: Invoice = {
-      ...invData,
-      id: `inv-${Date.now()}`,
-    };
-    setInvoices(prev => [newInv, ...prev]);
-    logAudit('CREATE_INVOICE', `Invoice ${newInv.invoiceNumber}`, `Created ${newInv.type} invoice for $${newInv.amount.toFixed(2)}.`);
     addToast({
       type: 'success',
-      title: 'Invoice Created',
-      message: `${newInv.invoiceNumber} recorded.`,
+      title: 'Payment Recorded',
+      message: `Recorded payment of ₹${amount.toLocaleString('en-IN')} to ${supplier.name}.`,
     });
   };
 
-  const updateInvoiceStatus = (id: string, status: InvoiceStatus) => {
-    setInvoices(prev => prev.map(inv => (inv.id === id ? { ...inv, status } : inv)));
-    logAudit('UPDATE_INVOICE_STATUS', `Invoice ${id}`, `Status changed to ${status}.`);
-    addToast({
-      type: 'info',
-      title: 'Invoice Updated',
-      message: `Invoice status changed to ${status}.`,
-    });
-  };
-
-  // Employee Claims
-  const addClaim = (claimData: Omit<EmployeeExpenseClaim, 'id' | 'claimNumber' | 'submittedAt'>) => {
-    const claimSeq = claims.length + 19;
-    const newClaim: EmployeeExpenseClaim = {
-      ...claimData,
-      id: `clm-${Date.now()}`,
-      claimNumber: `CLM-2026-0${claimSeq}`,
-      submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
-    };
-    setClaims(prev => [newClaim, ...prev]);
-    logAudit('CREATE_CLAIM', `Claim ${newClaim.claimNumber}`, `Submitted by ${newClaim.employeeName} for $${newClaim.amount.toFixed(2)}.`);
-    addToast({
-      type: 'success',
-      title: 'Claim Submitted',
-      message: `${newClaim.claimNumber} logged for approval.`,
-    });
-  };
-
-  const updateClaimStatus = (id: string, status: ReimbursementStatus) => {
-    const target = claims.find(c => c.id === id);
-    setClaims(prev =>
-      prev.map(c => {
-        if (c.id === id) {
-          return {
-            ...c,
-            status,
-            approvedBy: status === 'Approved' ? `${currentRole} User` : c.approvedBy,
-            approvedAt: status === 'Approved' ? new Date().toISOString().replace('T', ' ').substring(0, 16) : c.approvedAt,
-          };
-        }
-        return c;
-      })
-    );
-
-    if (status === 'Approved' && target) {
-      // Create expense ledger entry automatically
-      addExpense({
-        date: target.date,
-        employee: target.employeeName,
-        department: target.department,
-        category: target.claimType === 'Travel Reimbursement' ? 'Travel' : target.claimType === 'Food & Per Diem' ? 'Food' : target.claimType === 'Equipment Purchase' ? 'Equipment' : 'Office expenses',
-        amount: target.amount,
-        gstAmount: 0,
-        tdsAmount: 0,
-        paymentMethod: 'Employee Reimbursement ACH',
-        description: `Reimbursement ${target.claimNumber}: ${target.description}`,
-        status: 'Approved',
-        isTechExpense: target.claimType === 'Equipment Purchase',
-        glCode: 'GL-6800-REIMBURSEMENT',
-        taxAmount: 0.0,
-        notes: `Auto-generated from approved claim ${target.claimNumber}`,
-      });
+  // EXPORTS
+  const exportExpensesExcel = () => {
+    if (expenses.length === 0) {
+      addToast({ type: 'warning', title: 'No Data', message: 'No expenses available to export.' });
+      return;
     }
 
-    logAudit('CLAIM_STATUS_CHANGE', `Claim ${target?.claimNumber || id}`, `Changed status to ${status}.`);
-    addToast({
-      type: 'info',
-      title: 'Claim Updated',
-      message: `Claim status changed to ${status}.`,
-    });
+    const rows = expenses.map(e => ({
+      'Reference #': e.referenceNumber,
+      Date: e.date,
+      Category: e.category,
+      Description: e.description,
+      'Amount (INR)': e.amount,
+      Status: e.status,
+      Receipt: e.receiptFileName || 'No receipt',
+      Notes: e.notes || '',
+    }));
+
+    exportToExcel(rows, `Expenses_Export_${new Date().toISOString().split('T')[0]}`);
   };
 
-  const approveClaim = (id: string) => updateClaimStatus(id, 'Approved');
-  const rejectClaim = (id: string) => updateClaimStatus(id, 'Rejected');
-  const payVendor = (vendorId: string, amount: number) => recordVendorPayment(vendorId, amount);
+  const exportExpensesCSV = () => {
+    if (expenses.length === 0) {
+      addToast({ type: 'warning', title: 'No Data', message: 'No expenses available to export.' });
+      return;
+    }
 
-  // CTO filter: Technology expenses only
-  const filteredExpenses = currentRole === 'CTO'
-    ? expenses.filter(e => e.isTechExpense || ['Cloud services', 'Software subscriptions', 'Equipment'].includes(e.category) || e.department === 'Engineering')
-    : expenses;
+    const headers = 'Reference,Date,Category,Description,Amount,Status,Receipt,Notes\n';
+    const rows = expenses
+      .map(
+        e =>
+          `"${e.referenceNumber}","${e.date}","${e.category}","${e.description.replace(/"/g, '""')}",${e.amount},"${e.status}","${e.receiptFileName || ''}","${(e.notes || '').replace(/"/g, '""')}"`
+      )
+      .join('\n');
 
-  // Computed Financial Overview Figures
-  const cashBalance = 14285500.42; // ₹1.43 Crore HDFC/ICICI Treasury
-  
-  const todaySpend = expenses
-    .filter(e => e.date === '2026-08-16' && e.status === 'Approved')
-    .reduce((sum, e) => sum + e.amount, 0);
+    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Expenses_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const weekSpend = expenses
-    .filter(e => e.date >= '2026-08-10' && e.status === 'Approved')
-    .reduce((sum, e) => sum + e.amount, 0);
+  const exportPayrollExcel = (fiscalMonth: string) => {
+    if (employees.length === 0) {
+      addToast({ type: 'warning', title: 'No Data', message: 'No employees in registry.' });
+      return;
+    }
 
-  const monthSpend = expenses
-    .filter(e => e.date >= '2026-08-01' && e.status === 'Approved')
-    .reduce((sum, e) => sum + e.amount, 0);
+    const rows = employees.map(emp => {
+      const slip = emp.salaryHistory.find(s => s.fiscalMonth === fiscalMonth);
+      const base = emp.monthlySalary || 0;
+      const allowances = emp.allowances || 0;
+      const bonuses = emp.bonuses || 0;
+      const deductions = emp.deductions || 0;
+      const net = base + allowances + bonuses - deductions;
 
-  const pendingPayablesTotal = invoices
-    .filter(i => i.type === 'Accounts Payable' && (i.status === 'Scheduled' || i.status === 'Received'))
-    .reduce((sum, i) => sum + i.amount, 0);
+      return {
+        'Employee ID': emp.employeeId,
+        'Full Name': emp.fullName,
+        Department: emp.department,
+        Position: emp.position,
+        'Employment Type': emp.employmentType,
+        'Fiscal Month': fiscalMonth,
+        'Base Salary (₹)': base,
+        'Allowances (₹)': allowances,
+        'Bonuses (₹)': bonuses,
+        'Deductions (₹)': deductions,
+        'Net Salary (₹)': net,
+        'Payment Status': slip ? slip.paymentStatus : 'Unpaid',
+        'Payment Date': slip ? slip.paymentDate || '—' : '—',
+        'Reference #': slip ? slip.referenceNumber || '—' : '—',
+      };
+    });
 
-  const totalEmployeeExpenseTotal = claims
-    .filter(c => c.status === 'Approved' || c.status === 'Disbursed')
-    .reduce((sum, c) => sum + c.amount, 0);
+    exportToExcel(rows, `Payroll_Summary_${fiscalMonth}`);
+  };
 
-  const totalVendorExpenseTotal = vendors.reduce((sum, v) => sum + v.outstandingBalance, 0);
-
-  const totalMonthlyRevenue = invoices
-    .filter(i => i.type === 'Accounts Receivable' && (i.status === 'Paid' || i.status === 'Sent'))
-    .reduce((sum, i) => sum + i.amount, 0);
+  // Reset Clean State
+  const clearAllData = () => {
+    setExpenses([]);
+    setPendingReviewTransactions([]);
+    setStatements([]);
+    setActiveStatement(null);
+    setExtractionResult(null);
+    setEmployees([]);
+    setBudgets([]);
+    setSuppliers([]);
+    localStorage.clear();
+    addToast({
+      type: 'info',
+      title: 'Ledger Reset',
+      message: 'All records have been cleared to a clean state.',
+    });
+  };
 
   return (
     <FinanceContext.Provider
       value={{
-        currentRole,
-        setCurrentRole,
         activeModule,
         setActiveModule,
-        isCompactMode,
-        setIsCompactMode,
         isSidebarCollapsed,
         setIsSidebarCollapsed,
-        commandPaletteOpen,
-        setCommandPaletteOpen,
+        globalSearchQuery,
+        setGlobalSearchQuery,
+
+        // Bank Statement Engine & Verification
+        statements,
+        activeStatement,
+        extractionResult,
+        pendingReviewTransactions,
+        isAnalyzingStatement,
+        uploadAndAnalyzeStatement,
+        updateReviewCategory,
+        editReviewTransaction,
+        deleteReviewTransaction,
+        batchChangeReviewCategory,
+        approveAndSaveAllReviewTransactions,
+        approveAndSaveSelectedTransactions,
+        discardPendingReview,
+
+        // Expenses
         expenses,
         addExpense,
         updateExpense,
         deleteExpense,
-        bulkUpdateExpenseStatus,
-        bulkUpdateExpenseCategory,
-        bulkDeleteExpenses,
-        statements,
-        transactions,
-        importBankStatement,
-        reconcileTransaction,
-        autoReconcileAll,
-        createExpenseFromTransaction,
-        rules,
-        addRule,
-        updateRule,
-        deleteRule,
-        reapplyAllRules,
+
+        // Employees & Payroll
+        employees,
+        addEmployee,
+        updateEmployee,
+        deleteEmployee,
+        recordSalaryPayment,
+        updateSalaryStatus,
+        totalMonthlyPayroll,
+        salariesPaidThisMonth,
+        salariesPendingThisMonth,
+        activeEmployeesCount,
+
+        // Budgets
         budgets,
+        addBudget,
         updateBudget,
-        vendors,
-        addVendor,
-        updateVendor,
-        recordVendorPayment,
-        payVendor,
-        invoices,
-        addInvoice,
-        updateInvoiceStatus,
-        claims,
-        addClaim,
-        updateClaimStatus,
-        approveClaim,
-        rejectClaim,
-        auditLogs,
-        logAudit,
+        deleteBudget,
+
+        // Suppliers
+        suppliers,
+        addSupplier,
+        updateSupplier,
+        deleteSupplier,
+        paySupplier,
+
+        // Simplified Metrics
+        thisMonthSpending,
+        totalTransactionsCount,
+        pendingPaymentsTotal,
+        largestExpense,
+        recentTransactions,
+
+        // Toasts
         toasts,
         addToast,
         removeToast,
-        filteredExpenses,
-        cashBalance,
-        todaySpend,
-        weekSpend,
-        monthSpend,
-        pendingPayablesTotal,
-        totalEmployeeExpenseTotal,
-        totalVendorExpenseTotal,
-        totalMonthlyRevenue,
+
+        // Exports
+        exportExpensesExcel,
+        exportExpensesCSV,
+        exportPayrollExcel,
+        clearAllData,
       }}
     >
       {children}
@@ -847,7 +1051,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
   );
 };
 
-export const useFinance = () => {
+export const useFinance = (): FinanceContextType => {
   const context = useContext(FinanceContext);
   if (!context) {
     throw new Error('useFinance must be used within a FinanceProvider');
