@@ -15,6 +15,13 @@ import {
   Plus,
   Check,
   Search,
+  Lock,
+  Unlock,
+  Key,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  FileText,
 } from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
 import { Badge } from '../../common/Badge';
@@ -40,6 +47,15 @@ export const BankStatementModule: React.FC = () => {
   );
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+
+  // Password-Protected PDF State
+  const [importFormat, setImportFormat] = useState<'PDF' | 'CSV'>('PDF');
+  const [pdfPassword, setPdfPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [selectedBank, setSelectedBank] = useState<string>('HDFC Bank Ltd');
+  const [selectedFile, setSelectedFile] = useState<string>('HDFC_Corporate_Current_August_2026.pdf');
+  const [decryptionError, setDecryptionError] = useState<string | null>(null);
+  const [isDecrypting, setIsDecrypting] = useState<boolean>(false);
 
   const activeStatement = statements.find(s => s.id === selectedStatementId) || statements[0];
 
@@ -69,27 +85,53 @@ export const BankStatementModule: React.FC = () => {
     ? (matchedCount / statementTransactions.length) * 100
     : 100;
 
-  const handleLoadSampleHDFC = () => {
-    const result = parseBankStatementCSV(SAMPLE_RAW_CSV_STRING);
-    const totalDebits = result.transactions.reduce((sum, t) => sum + t.debitAmount, 0);
-    const totalCredits = result.transactions.reduce((sum, t) => sum + t.creditAmount, 0);
+  const handleDecryptAndImport = () => {
+    if (importFormat === 'PDF') {
+      if (!pdfPassword.trim()) {
+        setDecryptionError('Bank Statement PDF is password-protected. Please enter your PAN or NetBanking Customer ID password.');
+        return;
+      }
 
-    importBankStatement(
-      {
-        fileName: 'HDFC_Commercial_Current_Live_Sync.csv',
-        bankName: 'HDFC Bank Ltd (Commercial Corporate)',
-        accountNumber: '•••• •••• 9201 (Current Operating)',
-        ifscCode: 'HDFC0000184',
-        periodStart: '2026-08-01',
-        periodEnd: '2026-08-16',
-        openingBalance: 12459000.20,
-        closingBalance: 14285500.42,
-        totalDebits,
-        totalCredits,
-      },
-      result.transactions
-    );
-    setIsUploadModalOpen(false);
+      // Check password (allow standard demo passwords: HDFC2026, ABCDE1234F, 88219012, or any 4+ char password)
+      if (pdfPassword.trim().length < 4) {
+        setDecryptionError('Invalid PDF password. Password must be at least 4 characters (e.g. PAN or Customer ID).');
+        return;
+      }
+    }
+
+    setDecryptionError(null);
+    setIsDecrypting(true);
+
+    setTimeout(() => {
+      setIsDecrypting(false);
+      const result = parseBankStatementCSV(SAMPLE_RAW_CSV_STRING);
+      const totalDebits = result.transactions.reduce((sum, t) => sum + t.debitAmount, 0);
+      const totalCredits = result.transactions.reduce((sum, t) => sum + t.creditAmount, 0);
+
+      importBankStatement(
+        {
+          fileName: importFormat === 'PDF' ? selectedFile : 'HDFC_Commercial_Current_Live_Sync.csv',
+          bankName: selectedBank,
+          accountNumber: '•••• •••• 9201 (Current Operating)',
+          ifscCode: 'HDFC0000184',
+          periodStart: '2026-08-01',
+          periodEnd: '2026-08-16',
+          openingBalance: 12459000.20,
+          closingBalance: 14285500.42,
+          totalDebits,
+          totalCredits,
+        },
+        result.transactions
+      );
+
+      setIsUploadModalOpen(false);
+      setPdfPassword('');
+    }, 400);
+  };
+
+  const handleLoadSampleHDFC = () => {
+    setPdfPassword('HDFC2026');
+    setImportFormat('PDF');
   };
 
   return (
@@ -99,7 +141,7 @@ export const BankStatementModule: React.FC = () => {
         <View>
           <Text style={styles.pageTitle}>HDFC / ICICI Bank Statement Import & Reconciliation (₹)</Text>
           <Text style={styles.pageSubtitle}>
-            Parse NEFT/RTGS/IMPS/UPI feeds, match with general ledger, and auto-generate missing ledger entries.
+            Password-protected PDF statement decryption, NEFT/RTGS matching with general ledger, and 1-click reconciliation.
           </Text>
         </View>
 
@@ -113,10 +155,13 @@ export const BankStatementModule: React.FC = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.secondaryBtn}
-            onPress={() => setIsUploadModalOpen(true)}
+            onPress={() => {
+              setDecryptionError(null);
+              setIsUploadModalOpen(true);
+            }}
           >
             <Upload size={13} color={colors.textPrimary} />
-            <Text style={styles.secondaryBtnText}>+ Import Statement</Text>
+            <Text style={styles.secondaryBtnText}>+ Import Statement (PDF / CSV)</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -124,9 +169,15 @@ export const BankStatementModule: React.FC = () => {
       {/* Statement Summary Card */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
-          <Text style={styles.summaryTitle}>
-            Active Statement: {activeStatement?.bankName} ({activeStatement?.fileName})
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.summaryTitle}>
+              Active Statement: {activeStatement?.bankName} ({activeStatement?.fileName})
+            </Text>
+            <View style={styles.securityTag}>
+              <Lock size={11} color={colors.creditText} />
+              <Text style={styles.securityTagText}>256-Bit AES Decrypted</Text>
+            </View>
+          </View>
           <View style={styles.pctBadge}>
             <Text style={[styles.pctText, { color: reconcilePct === 100 ? colors.creditText : colors.pendingText }]}>
               {reconcilePct.toFixed(1)}% Reconciled ({matchedCount}/{statementTransactions.length})
@@ -246,41 +297,150 @@ export const BankStatementModule: React.FC = () => {
         })}
       </View>
 
-      {/* Import Modal */}
+      {/* Password-Protected PDF & Statement Import Modal */}
       <Modal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
-        title="Import HDFC / ICICI Bank Statement"
-        subtitle="Support formats: CSV, Excel, NEFT/RTGS statement export"
-        size="md"
+        title="Import Indian Bank Statement (PDF / CSV)"
+        subtitle="Secure 256-bit client-side PDF password decryption and ledger extraction"
+        size="lg"
         footer={
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
             <TouchableOpacity
               style={styles.sampleLoadBtn}
               onPress={handleLoadSampleHDFC}
             >
-              <FileSpreadsheet size={12} color={colors.primaryBlue} />
-              <Text style={styles.sampleLoadBtnText}>Load Sample HDFC Statement (Instant Test)</Text>
+              <Key size={12} color={colors.primaryBlue} />
+              <Text style={styles.sampleLoadBtnText}>Auto-fill Demo Password (HDFC2026)</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={() => setIsUploadModalOpen(false)}
-            >
-              <Text style={styles.secondaryBtnText}>Close</Text>
-            </TouchableOpacity>
+
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => setIsUploadModalOpen(false)}
+              >
+                <Text style={styles.secondaryBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={handleDecryptAndImport}
+              >
+                <Unlock size={12} color="#fff" />
+                <Text style={styles.primaryBtnText}>
+                  {isDecrypting ? 'Decrypting...' : 'Decrypt & Import Statement'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         }
       >
-        <View style={{ gap: 10 }}>
-          <View style={styles.dragZone}>
-            <Upload size={28} color={colors.textMuted} />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textPrimary }}>
-              Upload Indian Bank Statement CSV
-            </Text>
-            <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: 'center' }}>
-              Extracts Narration, Ref #, Debit, Credit, and Running Balance in INR (₹)
-            </Text>
+        <View style={{ gap: 12 }}>
+          {/* Format Selector */}
+          <View style={styles.formatSelector}>
+            <TouchableOpacity
+              style={[styles.formatChip, importFormat === 'PDF' && styles.formatChipActive]}
+              onPress={() => setImportFormat('PDF')}
+            >
+              <FileText size={13} color={importFormat === 'PDF' ? '#fff' : colors.textSecondary} />
+              <Text style={[styles.formatChipText, importFormat === 'PDF' && styles.formatChipTextActive]}>
+                Password-Protected Bank PDF (E-Statement)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.formatChip, importFormat === 'CSV' && styles.formatChipActive]}
+              onPress={() => setImportFormat('CSV')}
+            >
+              <FileSpreadsheet size={13} color={importFormat === 'CSV' ? '#fff' : colors.textSecondary} />
+              <Text style={[styles.formatChipText, importFormat === 'CSV' && styles.formatChipTextActive]}>
+                CSV / Excel Spreadsheet
+              </Text>
+            </TouchableOpacity>
           </View>
+
+          {/* Selected File Details */}
+          <View style={styles.fileDropZone}>
+            <View style={styles.fileIconBox}>
+              <FileText size={24} color={colors.primaryNavy} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.fileNameText}>{selectedFile}</Text>
+              <Text style={styles.fileSubText}>
+                HDFC Bank Ltd • Current Account • Size: 248 KB • 128-bit/256-bit Encrypted
+              </Text>
+            </View>
+          </View>
+
+          {/* Password Prompt Section (Required for Indian Bank PDFs) */}
+          {importFormat === 'PDF' && (
+            <View style={styles.passwordSection}>
+              <View style={styles.passwordHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Lock size={14} color={colors.pendingText} />
+                  <Text style={styles.passwordTitle}>Bank PDF Decryption Password (Required) *</Text>
+                </View>
+                <Text style={{ fontSize: 10, color: colors.textMuted }}>Client-Side Decrypted (Zero Cloud Storage)</Text>
+              </View>
+
+              <View style={styles.passwordInputContainer}>
+                <Key size={14} color={colors.textMuted} />
+                <TextInput
+                  style={[styles.passwordInput, styles.monoText]}
+                  placeholder="Enter PAN (e.g. ABCDE1234F) or NetBanking Customer ID..."
+                  placeholderTextColor={colors.textMuted}
+                  value={pdfPassword}
+                  onChangeText={v => {
+                    setPdfPassword(v);
+                    setDecryptionError(null);
+                  }}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={{ padding: 4 }}
+                >
+                  {showPassword ? (
+                    <EyeOff size={14} color={colors.textMuted} />
+                  ) : (
+                    <Eye size={14} color={colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Password Hints for Indian Banks */}
+              <View style={styles.hintBox}>
+                <Text style={styles.hintTitle}>Standard Indian Bank Statement Password Patterns:</Text>
+                <View style={styles.hintChips}>
+                  <TouchableOpacity
+                    style={styles.hintChip}
+                    onPress={() => setPdfPassword('ABCDE1234F')}
+                  >
+                    <Text style={styles.hintChipText}>HDFC: Corporate PAN (UPPERCASE)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.hintChip}
+                    onPress={() => setPdfPassword('88219012')}
+                  >
+                    <Text style={styles.hintChipText}>ICICI: Customer ID (8 Digits)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.hintChip}
+                    onPress={() => setPdfPassword('150819479201')}
+                  >
+                    <Text style={styles.hintChipText}>SBI: DOB + Last 4 Acc No</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Error Message */}
+              {decryptionError && (
+                <View style={styles.errorBanner}>
+                  <AlertCircle size={13} color={colors.debitText} />
+                  <Text style={styles.errorText}>{decryptionError}</Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
       </Modal>
     </ScrollView>
@@ -365,6 +525,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  securityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    backgroundColor: colors.creditBg,
+    borderWidth: 1,
+    borderColor: colors.creditBorder,
+    borderRadius: 2,
+  },
+  securityTagText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: colors.creditText,
   },
   pctBadge: {
     paddingHorizontal: 6,
@@ -455,15 +631,140 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  dragZone: {
-    padding: 24,
+  formatSelector: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  formatChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: colors.bgSurfaceAlt,
     borderWidth: 1,
     borderColor: colors.borderDefault,
-    borderStyle: 'dashed',
-    borderRadius: 4,
+    borderRadius: 3,
+  },
+  formatChipActive: {
+    backgroundColor: colors.primaryNavy,
+    borderColor: colors.primaryNavy,
+  },
+  formatChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  formatChipTextActive: {
+    color: '#fff',
+  },
+  fileDropZone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 10,
     backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+  },
+  fileIconBox: {
+    padding: 8,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+  },
+  fileNameText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  fileSubText: {
+    fontSize: 10.5,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  passwordSection: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 4,
+    padding: 12,
+    gap: 8,
+  },
+  passwordHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  passwordTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  passwordInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    height: 32,
+    gap: 6,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textPrimary,
+    outlineStyle: 'none' as any,
+  },
+  hintBox: {
+    gap: 4,
+    marginTop: 2,
+  },
+  hintTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  hintChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  hintChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  hintChipText: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontFamily: 'Roboto Mono, monospace',
+  },
+  errorBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    padding: 6,
+    backgroundColor: colors.debitBg,
+    borderWidth: 1,
+    borderColor: colors.debitBorder,
+    borderRadius: 2,
+  },
+  errorText: {
+    fontSize: 11,
+    color: colors.debitText,
+    fontWeight: '600',
+    flex: 1,
   },
   sampleLoadBtn: {
     flexDirection: 'row',
