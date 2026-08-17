@@ -220,7 +220,7 @@ export const CommandPalette: React.FC<{ isOpen?: boolean; onClose?: () => void }
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.6)',

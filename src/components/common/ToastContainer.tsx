@@ -53,7 +53,7 @@ export const ToastContainer: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   container: {
     position: 'absolute',
     bottom: 20,

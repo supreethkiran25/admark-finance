@@ -90,7 +90,7 @@ export function App() {
 
 export default App;
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   safeArea: {
     flex: 1,
     backgroundColor: colors.bgApp,

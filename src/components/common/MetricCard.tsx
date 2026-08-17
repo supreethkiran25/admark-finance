@@ -53,7 +53,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   card: {
     backgroundColor: colors.bgSurface,
     borderWidth: 1,

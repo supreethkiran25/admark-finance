@@ -829,7 +829,7 @@ export const StatementAnalysisWorkflow: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   outerContainer: {
     flex: 1,
     backgroundColor: colors.bgApp,
@@ -1167,7 +1167,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto Mono, monospace',
     color: colors.textSecondary,
     lineHeight: 14,
-    whiteSpace: 'pre-wrap' as any,
   },
   docFooter: {
     paddingHorizontal: 10,

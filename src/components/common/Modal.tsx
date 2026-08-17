@@ -67,7 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.45)',

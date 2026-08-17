@@ -77,7 +77,7 @@ export const Badge: React.FC<BadgeProps> = ({ status, size = 'md' }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   badge: {
     paddingHorizontal: 6,
     paddingVertical: 1,

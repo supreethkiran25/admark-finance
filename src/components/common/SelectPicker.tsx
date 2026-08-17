@@ -81,7 +81,7 @@ export const SelectPicker: React.FC<SelectPickerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   container: {
     gap: 3,
   },

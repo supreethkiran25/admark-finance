@@ -161,7 +161,7 @@ export const Sidebar: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   sidebar: {
     width: 200,
     backgroundColor: colors.bgSurface,

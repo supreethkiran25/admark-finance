@@ -37,7 +37,7 @@ export const DepartmentBurnChart: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   container: {
     backgroundColor: colors.bgSurface,
     borderWidth: 1,

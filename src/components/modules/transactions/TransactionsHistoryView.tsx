@@ -193,7 +193,7 @@ export const TransactionsHistoryView: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   container: {
     flex: 1,
     backgroundColor: colors.bgApp,

@@ -140,7 +140,7 @@ export const Header: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   header: {
     height: 48,
     backgroundColor: colors.bgSurface,

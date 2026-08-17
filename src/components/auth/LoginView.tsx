@@ -333,7 +333,7 @@ export const LoginView: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   screen: {
     flex: 1,
     backgroundColor: '#0b1329',

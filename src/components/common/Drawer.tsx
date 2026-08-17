@@ -67,7 +67,7 @@ export const Drawer: React.FC<DrawerProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create<any>({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.4)',
