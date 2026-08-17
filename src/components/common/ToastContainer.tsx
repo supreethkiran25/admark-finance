@@ -1,6 +1,8 @@
 import React from 'react';
-import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react-native';
 import { useFinance } from '../../context/FinanceContext';
+import { colors } from '../../theme/colors';
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useFinance();
@@ -8,79 +10,83 @@ export const ToastContainer: React.FC = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        zIndex: 3000,
-        maxWidth: '380px',
-      }}
-    >
+    <View style={styles.container}>
       {toasts.map(toast => {
-        let borderColor = 'var(--border-default)';
-        let bg = 'var(--bg-surface)';
-        let icon = <Info size={16} style={{ color: 'var(--info-text)' }} />;
+        let border = colors.borderDefault;
+        let bg = colors.bgSurface;
+        let icon = <Info size={16} color={colors.infoText} />;
 
         if (toast.type === 'success') {
-          borderColor = 'var(--credit-border)';
+          border = colors.creditBorder;
           bg = '#f0fdf4';
-          icon = <CheckCircle2 size={16} style={{ color: 'var(--credit-text)' }} />;
+          icon = <CheckCircle2 size={16} color={colors.creditText} />;
         } else if (toast.type === 'error') {
-          borderColor = 'var(--debit-border)';
+          border = colors.debitBorder;
           bg = '#fef2f2';
-          icon = <AlertCircle size={16} style={{ color: 'var(--debit-text)' }} />;
+          icon = <AlertCircle size={16} color={colors.debitText} />;
         } else if (toast.type === 'warning') {
-          borderColor = 'var(--pending-border)';
+          border = colors.pendingBorder;
           bg = '#fffbeb';
-          icon = <AlertTriangle size={16} style={{ color: 'var(--pending-text)' }} />;
+          icon = <AlertTriangle size={16} color={colors.pendingText} />;
         }
 
         return (
-          <div
+          <View
             key={toast.id}
-            style={{
-              background: bg,
-              border: `1px solid ${borderColor}`,
-              borderRadius: 'var(--radius-sm)',
-              padding: '10px 14px',
-              boxShadow: 'var(--shadow-dropdown)',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              animation: 'slideInRight 0.15s ease-out',
-            }}
+            style={[styles.toast, { backgroundColor: bg, borderColor: border }]}
           >
-            <div style={{ marginTop: '1px' }}>{icon}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>
-                {toast.title}
-              </div>
-              {toast.message && (
-                <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {toast.message}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                color: 'var(--text-muted)',
-                padding: '2px',
-                display: 'flex',
-              }}
+            <View style={{ marginTop: 2 }}>{icon}</View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{toast.title}</Text>
+              {toast.message && <Text style={styles.message}>{toast.message}</Text>}
+            </View>
+            <TouchableOpacity
+              onPress={() => removeToast(toast.id)}
+              style={styles.closeBtn}
             >
-              <X size={13} />
-            </button>
-          </div>
+              <X size={12} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         );
       })}
-    </div>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    zIndex: 9999,
+    width: 360,
+    maxWidth: '90%',
+    gap: 8,
+  },
+  toast: {
+    padding: 10,
+    borderRadius: 3,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  message: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 2,
+  },
+});

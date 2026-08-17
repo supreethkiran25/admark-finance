@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import {
   LayoutDashboard,
   Receipt,
@@ -12,9 +13,10 @@ import {
   Shield,
   Plus,
   Upload,
-} from 'lucide-react';
+} from 'lucide-react-native';
 import { useFinance } from '../../context/FinanceContext';
 import { NavigationModule } from '../../types/finance';
+import { colors } from '../../theme/colors';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -38,11 +40,9 @@ export const Sidebar: React.FC = () => {
     items: Array<{
       id: NavigationModule;
       label: string;
-      icon: React.ReactNode;
+      icon: (color: string) => React.ReactNode;
       badge?: number | string;
-      badgeType?: 'credit' | 'debit' | 'pending' | 'info';
-      rolesAllowed?: string[];
-      highlight?: boolean;
+      badgeType?: 'credit' | 'debit' | 'pending';
     }>;
   }
 
@@ -53,26 +53,26 @@ export const Sidebar: React.FC = () => {
         {
           id: 'overview',
           label: 'Executive Overview',
-          icon: <LayoutDashboard size={15} />,
+          icon: (c) => <LayoutDashboard size={14} color={c} />,
         },
         {
           id: 'expenses',
           label: 'Expense Management',
-          icon: <Receipt size={15} />,
+          icon: (c) => <Receipt size={14} color={c} />,
           badge: pendingExpensesCount > 0 ? pendingExpensesCount : undefined,
           badgeType: 'pending',
         },
         {
           id: 'statements',
-          label: 'Bank Statements & Reconcile',
-          icon: <FileSpreadsheet size={15} />,
+          label: 'HDFC / ICICI Reconcile',
+          icon: (c) => <FileSpreadsheet size={14} color={c} />,
           badge: unmatchedTxsCount > 0 ? `${unmatchedTxsCount} open` : undefined,
           badgeType: 'debit',
         },
         {
           id: 'categorization',
           label: 'Auto-Categorization',
-          icon: <Cpu size={15} />,
+          icon: (c) => <Cpu size={14} color={c} />,
         },
       ],
     },
@@ -81,30 +81,30 @@ export const Sidebar: React.FC = () => {
       items: [
         {
           id: 'employees',
-          label: 'Employee Reimbursements',
-          icon: <UserCheck size={15} />,
+          label: 'Employee Claims (INR)',
+          icon: (c) => <UserCheck size={14} color={c} />,
           badge: pendingClaimsCount > 0 ? pendingClaimsCount : undefined,
           badgeType: 'pending',
         },
         {
           id: 'budgets',
           label: 'Department Budgets',
-          icon: <PieChart size={15} />,
+          icon: (c) => <PieChart size={14} color={c} />,
         },
       ],
     },
     {
-      title: 'Commercial & AP / AR',
+      title: 'Commercial & Tax',
       items: [
         {
           id: 'vendors',
-          label: 'Vendor Directory',
-          icon: <Building2 size={15} />,
+          label: 'Vendor AP & TDS',
+          icon: (c) => <Building2 size={14} color={c} />,
         },
         {
           id: 'invoices',
-          label: 'Invoices (AP / AR)',
-          icon: <FileText size={15} />,
+          label: 'GST Tax Invoices',
+          icon: (c) => <FileText size={14} color={c} />,
           badge: overdueInvoicesCount > 0 ? `${overdueInvoicesCount} overdue` : undefined,
           badgeType: 'debit',
         },
@@ -115,193 +115,223 @@ export const Sidebar: React.FC = () => {
       items: [
         {
           id: 'reports',
-          label: 'Financial Reports & P&L',
-          icon: <FileText size={15} />,
+          label: 'P&L Reports (₹)',
+          icon: (c) => <FileText size={14} color={c} />,
         },
         {
           id: 'analytics',
           label: 'Financial Analytics',
-          icon: <BarChart3 size={15} />,
+          icon: (c) => <BarChart3 size={14} color={c} />,
         },
         {
           id: 'security',
-          label: 'Security & Audit Trail',
-          icon: <Shield size={15} />,
+          label: 'Security & Audit Log',
+          icon: (c) => <Shield size={14} color={c} />,
         },
       ],
     },
   ];
 
+  const sidebarWidth = isSidebarCollapsed ? 54 : 220;
+
   return (
-    <aside
-      className="no-print"
-      style={{
-        width: isSidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)',
-        minWidth: isSidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)',
-        background: 'var(--bg-surface-alt)',
-        borderRight: '1px solid var(--border-default)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        height: 'calc(100vh - var(--header-height))',
-        position: 'sticky',
-        top: 'var(--header-height)',
-        transition: 'width 0.15s ease, min-width 0.15s ease',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        userSelect: 'none',
-      }}
-    >
-      <div style={{ padding: isSidebarCollapsed ? '8px 4px' : '10px 8px' }}>
-        {/* Role Banner if filtered */}
+    <View style={[styles.sidebar, { width: sidebarWidth }]}>
+      <ScrollView style={{ flex: 1, padding: isSidebarCollapsed ? 4 : 8 }}>
         {currentRole === 'CTO' && !isSidebarCollapsed && (
-          <div
-            style={{
-              padding: '6px 8px',
-              marginBottom: '10px',
-              background: 'var(--info-bg)',
-              border: '1px solid var(--info-border)',
-              borderRadius: 'var(--radius-xs)',
-              fontSize: '10.5px',
-              color: 'var(--info-text)',
-              lineHeight: 1.3,
-            }}
-          >
-            <strong>CTO View Filter:</strong> Showing Tech & Infrastructure expenses only.
-          </div>
+          <View style={styles.ctoBanner}>
+            <Text style={styles.ctoBannerText}>
+              <Text style={{ fontWeight: '700' }}>CTO Filter:</Text> Tech & Cloud expenses only.
+            </Text>
+          </View>
         )}
 
-        {sections.map((section, sIdx) => (
-          <div key={sIdx} style={{ marginBottom: '14px' }}>
+        {sections.map((sec, sIdx) => (
+          <View key={sIdx} style={{ marginBottom: 12 }}>
             {!isSidebarCollapsed && (
-              <div
-                style={{
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: 'var(--text-muted)',
-                  padding: '4px 8px',
-                  marginBottom: '2px',
-                }}
-              >
-                {section.title}
-              </div>
+              <Text style={styles.sectionHeader}>{sec.title}</Text>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-              {section.items.map(item => {
+            <View style={{ gap: 2 }}>
+              {sec.items.map(item => {
                 const isActive = activeModule === item.id;
+                const iconColor = isActive ? colors.primaryBlue : colors.textMuted;
+
                 return (
-                  <button
+                  <TouchableOpacity
                     key={item.id}
-                    type="button"
-                    onClick={() => setActiveModule(item.id)}
-                    title={isSidebarCollapsed ? item.label : undefined}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: isSidebarCollapsed ? 'center' : 'space-between',
-                      width: '100%',
-                      padding: isSidebarCollapsed ? '8px 0' : '6px 8px',
-                      fontSize: '12px',
-                      fontWeight: isActive ? 600 : 500,
-                      color: isActive ? 'var(--primary-navy)' : 'var(--text-secondary)',
-                      background: isActive ? 'var(--bg-surface)' : 'transparent',
-                      border: '1px solid',
-                      borderColor: isActive ? 'var(--border-default)' : 'transparent',
-                      borderRadius: 'var(--radius-xs)',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
-                      transition: 'background-color 0.1s, border-color 0.1s',
-                    }}
+                    onPress={() => setActiveModule(item.id)}
+                    style={[
+                      styles.navItem,
+                      isActive && styles.navItemActive,
+                      isSidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 },
+                    ]}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span
-                        style={{
-                          color: isActive ? 'var(--primary-blue)' : 'var(--text-muted)',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                      >
-                        {item.icon}
-                      </span>
-                      {!isSidebarCollapsed && <span>{item.label}</span>}
-                    </div>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {item.icon(iconColor)}
+                      {!isSidebarCollapsed && (
+                        <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+                          {item.label}
+                        </Text>
+                      )}
+                    </View>
 
                     {!isSidebarCollapsed && item.badge && (
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontFamily: 'var(--font-mono)',
-                          padding: '1px 5px',
-                          borderRadius: '2px',
-                          fontWeight: 600,
-                          background:
-                            item.badgeType === 'debit'
-                              ? 'var(--debit-bg)'
-                              : item.badgeType === 'pending'
-                              ? 'var(--pending-bg)'
-                              : 'var(--bg-surface-subtle)',
-                          color:
-                            item.badgeType === 'debit'
-                              ? 'var(--debit-text)'
-                              : item.badgeType === 'pending'
-                              ? 'var(--pending-text)'
-                              : 'var(--text-secondary)',
-                          border: `1px solid ${
-                            item.badgeType === 'debit'
-                              ? 'var(--debit-border)'
-                              : item.badgeType === 'pending'
-                              ? 'var(--pending-border)'
-                              : 'var(--border-subtle)'
-                          }`,
-                        }}
+                      <View
+                        style={[
+                          styles.badge,
+                          item.badgeType === 'debit' && { backgroundColor: colors.debitBg, borderColor: colors.debitBorder },
+                          item.badgeType === 'pending' && { backgroundColor: colors.pendingBg, borderColor: colors.pendingBorder },
+                        ]}
                       >
-                        {item.badge}
-                      </span>
+                        <Text
+                          style={[
+                            styles.badgeText,
+                            item.badgeType === 'debit' && { color: colors.debitText },
+                            item.badgeType === 'pending' && { color: colors.pendingText },
+                          ]}
+                        >
+                          {item.badge}
+                        </Text>
+                      </View>
                     )}
-                  </button>
+                  </TouchableOpacity>
                 );
               })}
-            </div>
-          </div>
+            </View>
+          </View>
         ))}
-      </div>
+      </ScrollView>
 
-      {/* Quick Action Ribbon at bottom */}
+      {/* Quick Action Footer */}
       {!isSidebarCollapsed && (
-        <div
-          style={{
-            padding: '10px 8px',
-            borderTop: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-          }}
-        >
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => setActiveModule('expenses')}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.primaryActionBtn}
+            onPress={() => setActiveModule('expenses')}
           >
-            <Plus size={13} />
-            <span>+ Record Expense</span>
-          </button>
-          <button
-            type="button"
-            className="btn"
-            style={{ width: '100%', justifyContent: 'center' }}
-            onClick={() => setActiveModule('statements')}
+            <Plus size={12} color="#fff" />
+            <Text style={styles.primaryActionText}>+ Record Expense</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryActionBtn}
+            onPress={() => setActiveModule('statements')}
           >
-            <Upload size={13} />
-            <span>Import Statement</span>
-          </button>
-        </div>
+            <Upload size={12} color={colors.textPrimary} />
+            <Text style={styles.secondaryActionText}>Import Statement</Text>
+          </TouchableOpacity>
+        </View>
       )}
-    </aside>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  sidebar: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderRightWidth: 1,
+    borderRightColor: colors.borderDefault,
+    height: '100%',
+    justifyContent: 'space-between',
+  },
+  ctoBanner: {
+    padding: 6,
+    marginBottom: 8,
+    backgroundColor: colors.infoBg,
+    borderWidth: 1,
+    borderColor: colors.infoBorder,
+    borderRadius: 2,
+  },
+  ctoBannerText: {
+    fontSize: 10,
+    color: colors.infoText,
+    lineHeight: 13,
+  },
+  sectionHeader: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+    paddingHorizontal: 6,
+    marginBottom: 3,
+    letterSpacing: 0.5,
+  },
+  navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  navItemActive: {
+    backgroundColor: colors.bgSurface,
+    borderColor: colors.borderDefault,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  navLabel: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  navLabelActive: {
+    fontWeight: '700',
+    color: colors.primaryNavy,
+  },
+  badge: {
+    paddingHorizontal: 4,
+    paddingVertical: 0.5,
+    borderRadius: 2,
+    borderWidth: 1,
+    backgroundColor: colors.bgSurfaceSubtle,
+    borderColor: colors.borderSubtle,
+  },
+  badgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    fontFamily: 'Roboto Mono, monospace',
+    color: colors.textSecondary,
+  },
+  footer: {
+    padding: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
+    backgroundColor: colors.bgSurface,
+    gap: 5,
+  },
+  primaryActionBtn: {
+    backgroundColor: colors.primaryNavy,
+    paddingVertical: 5,
+    borderRadius: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  primaryActionText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  secondaryActionBtn: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingVertical: 5,
+    borderRadius: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  secondaryActionText: {
+    color: colors.textPrimary,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+});

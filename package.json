@@ -10,9 +10,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-native/assets-registry": "^0.86.2",
+    "@types/react-native": "^0.72.8",
     "lucide-react": "^1.31.0",
+    "lucide-react-native": "^1.31.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "react-native-web": "^0.21.2"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",

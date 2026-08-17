@@ -1,339 +1,272 @@
 import React, { useState } from 'react';
-import {
-  Shield,
-  ShieldCheck,
-  Lock,
-  CheckCircle2,
-  AlertCircle,
-  FileText,
-  Search,
-  UserCheck,
-  Key,
-  Server,
-  Filter,
-} from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { ShieldCheck, CheckCircle2, Lock, UserCheck, Key } from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
-import { Badge } from '../../common/Badge';
+import { colors } from '../../../theme/colors';
 
 export const SecurityModule: React.FC = () => {
-  const { auditLogs, isCompactMode, currentRole } = useFinance();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAction, setSelectedAction] = useState('ALL');
+  const { auditLogs } = useFinance();
 
   const securityChecklist = [
     {
-      id: 'sec-csrf',
-      name: 'CSRF Token Protection',
-      status: 'Enforced',
-      description: 'Double-submit cookie validation with cryptographic nonces on all state-changing endpoints.',
-      category: 'Network & Headers',
+      id: 'sec-1',
+      title: 'CSRF Protection',
+      description: 'Double Submit Cookie verification on all accounting state mutation requests.',
+      status: 'VERIFIED',
+      category: 'Network',
     },
     {
-      id: 'sec-cookies',
-      name: 'Secure & HttpOnly Cookie Flags',
-      status: 'Enforced',
-      description: 'SameSite=Strict, Secure, HttpOnly flags active on authentication and session tokens.',
-      category: 'Session Security',
+      id: 'sec-2',
+      title: 'Secure & HttpOnly Cookies',
+      description: 'SameSite=Strict, HttpOnly, and Secure flags on financial session tokens.',
+      status: 'VERIFIED',
+      category: 'Session',
     },
     {
-      id: 'sec-cors',
-      name: 'CORS Origin Restrictions',
-      status: 'Enforced',
-      description: 'Strict origin whitelisting allowing only authorized agency domains; wildcards forbidden.',
-      category: 'Network & Headers',
+      id: 'sec-3',
+      title: 'CORS Origin Whitelisting',
+      description: 'Explicit origin restrictions for Indian banking and internal agency subdomains.',
+      status: 'VERIFIED',
+      category: 'Network',
     },
     {
-      id: 'sec-req-size',
-      name: 'Request-Size Limits',
-      status: 'Enforced',
-      description: 'Payload body parser capped at 10MB to prevent DoS vector attacks.',
-      category: 'API Defense',
+      id: 'sec-4',
+      title: 'Request Payload Constraints',
+      description: 'Strict 10MB payload ceiling on bank statement CSV and receipt uploads.',
+      status: 'VERIFIED',
+      category: 'Input',
     },
     {
-      id: 'sec-pwd-reset',
-      name: 'Password Reset Expiration',
-      status: 'Enforced',
-      description: 'Single-use cryptographic reset tokens with 15-minute strict time-to-live (TTL).',
-      category: 'Authentication',
+      id: 'sec-5',
+      title: 'Session Invalidation on Credential Change',
+      description: 'Immediate revocation of active JWT sessions upon password or 2FA update.',
+      status: 'VERIFIED',
+      category: 'Auth',
     },
     {
-      id: 'sec-session-inv',
-      name: 'Session Invalidation on Credential Change',
-      status: 'Enforced',
-      description: 'Instant revocation of all concurrent active JWT/OAuth tokens upon password change.',
-      category: 'Authentication',
+      id: 'sec-6',
+      title: 'File MIME-Type & Magic Byte Validation',
+      description: 'Validation on receipt PDFs, CSV, and image uploads preventing script injections.',
+      status: 'VERIFIED',
+      category: 'Storage',
     },
     {
-      id: 'sec-upload',
-      name: 'File Upload Restrictions & MIME Validation',
-      status: 'Enforced',
-      description: 'MIME magic-byte verification for PDF/CSV/Excel; executable file headers blocked.',
-      category: 'Data Ingestion',
+      id: 'sec-7',
+      title: 'Dual-Approval Payment Controls',
+      description: 'Mandatory secondary CFO/CEO approval for RTGS disbursements > ₹5,00,000.',
+      status: 'VERIFIED',
+      category: 'Disbursement',
     },
     {
-      id: 'sec-payment',
-      name: 'Payment Verification & 2-Person Rule',
-      status: 'Enforced',
-      description: 'Dual-approval signoff required for wire transfers exceeding $10,000.00.',
-      category: 'Financial Controls',
+      id: 'sec-8',
+      title: 'Role-Based Access Permissions (RBAC)',
+      description: 'Strict role gating across CEO, CFO, COO, and CTO visibility boundaries.',
+      status: 'VERIFIED',
+      category: 'Access',
     },
     {
-      id: 'sec-audit',
-      name: 'Immutable Audit Logging',
-      status: 'Enforced',
-      description: 'Append-only chronological trail capturing timestamp, user ID, role, action, and IP.',
+      id: 'sec-9',
+      title: 'Immutable Audit Logging',
+      description: 'Append-only chronological log of all ledger modifications and exports.',
+      status: 'VERIFIED',
+      category: 'Audit',
+    },
+    {
+      id: 'sec-10',
+      title: 'API Rate Limiting',
+      description: 'Tiered rate limiting at 100 req/min for financial endpoints and reporting.',
+      status: 'VERIFIED',
+      category: 'Network',
+    },
+    {
+      id: 'sec-11',
+      title: 'ISO 27001 & SOC-2 Type II Compliance',
+      description: 'Annual third-party penetration testing and continuous controls auditing.',
+      status: 'VERIFIED',
       category: 'Compliance',
     },
-    {
-      id: 'sec-rbac',
-      name: 'Role-Based Access Control (RBAC)',
-      status: 'Enforced',
-      description: 'Granular policy engine enforcing COO, CEO, CFO, and CTO permission boundaries.',
-      category: 'Authorization',
-    },
-    {
-      id: 'sec-ratelimit',
-      name: 'API Rate Limiting & Brute Force Shield',
-      status: 'Enforced',
-      description: 'Token bucket algorithm limiting clients to 100 requests/minute on sensitive routes.',
-      category: 'API Defense',
-    },
   ];
-
-  const roleMatrix = [
-    { module: 'Executive Overview', ceo: 'Full', cfo: 'Full', coo: 'Full', cto: 'Tech Only' },
-    { module: 'Expense Management (CRUD)', ceo: 'Full', cfo: 'Read/Audit', coo: 'Full (Lead)', cto: 'Tech Only' },
-    { module: 'Bank Statement Import & Reconcile', ceo: 'Full', cfo: 'Full', coo: 'Full', cto: 'No Access' },
-    { module: 'Automatic Categorization Rules', ceo: 'Full', cfo: 'Full', coo: 'Full', cto: 'No Access' },
-    { module: 'Employee Reimbursements', ceo: 'Full', cfo: 'Disburse', coo: 'Full Approval', cto: 'Submit Only' },
-    { module: 'Department Budget Adjustments', ceo: 'Approval', cfo: 'Full', coo: 'Full (Lead)', cto: 'Eng Only' },
-    { module: 'Vendor Contracts & AP Directory', ceo: 'Full', cfo: 'Full', coo: 'Full', cto: 'Tech Vendors' },
-    { module: 'Invoices (AP / AR)', ceo: 'Full', cfo: 'Full (Lead)', coo: 'Full', cto: 'No Access' },
-    { module: 'Financial Statements (P&L)', ceo: 'Full', cfo: 'Full (Sign-off)', coo: 'Full', cto: 'No Access' },
-    { module: 'Audit Log & Security Center', ceo: 'Full', cfo: 'Audit View', coo: 'Full', cto: 'No Access' },
-  ];
-
-  const filteredLogs = auditLogs.filter(log => {
-    if (selectedAction !== 'ALL' && log.action !== selectedAction) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        log.user.toLowerCase().includes(q) ||
-        log.action.toLowerCase().includes(q) ||
-        log.entity.toLowerCase().includes(q) ||
-        log.details.toLowerCase().includes(q) ||
-        log.ipAddress.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Security Controls, Compliance & Immutable Audit Trail
-          </h1>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            SOC-2 Type II financial security policy checklist, RBAC authorization matrix, and chronological event ledger.
-          </p>
-        </div>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title Ribbon */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <Text style={styles.pageTitle}>Security Compliance & Immutable Audit Log</Text>
+          <Text style={styles.pageSubtitle}>
+            11-point SOC-2 & ISO 27001 financial operational checklist, RBAC permissions, and event audit trail.
+          </Text>
+        </View>
+      </View>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ShieldCheck size={16} style={{ color: 'var(--credit-text)' }} />
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--credit-text)' }}>
-            All 11 Security Gates Active & Enforced
-          </span>
-        </div>
-      </div>
+      {/* Security Checklist */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Pre-Deployment Enterprise Security Checklist</Text>
+        <View style={styles.checklistGrid}>
+          {securityChecklist.map(item => (
+            <View key={item.id} style={styles.checkItem}>
+              <CheckCircle2 size={15} color={colors.creditText} />
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.checkItemTitle}>{item.title}</Text>
+                  <View style={styles.catBadge}>
+                    <Text style={styles.catBadgeText}>{item.category}</Text>
+                  </View>
+                </View>
+                <Text style={styles.checkItemDesc}>{item.description}</Text>
+              </View>
+              <View style={styles.verifiedPill}>
+                <Text style={styles.verifiedText}>PASS</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
 
-      {/* Two Column: Security Checklist + RBAC Matrix */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px', marginBottom: '16px' }}>
-        {/* Security Checklist */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Lock size={14} style={{ color: 'var(--primary-navy)' }} />
-            <span>Pre-Deployment Security Verification Checklist</span>
-          </div>
+      {/* Immutable Audit Trail */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.cell, { flex: 1.8, fontWeight: '700' }]}>Timestamp</Text>
+          <Text style={[styles.cell, { flex: 1.6, fontWeight: '700' }]}>User / Role</Text>
+          <Text style={[styles.cell, { flex: 1.6, fontWeight: '700' }]}>Action</Text>
+          <Text style={[styles.cell, { flex: 3.5, fontWeight: '700' }]}>Entity / Details</Text>
+          <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>Origin IP</Text>
+        </View>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '340px', overflowY: 'auto' }}>
-            {securityChecklist.map(item => (
-              <div
-                key={item.id}
-                style={{
-                  padding: '7px 10px',
-                  background: 'var(--bg-surface-alt)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: 'var(--radius-xs)',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  justifyContent: 'space-between',
-                  gap: '10px',
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={12} style={{ color: 'var(--credit-text)' }} />
-                    <strong style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{item.name}</strong>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>({item.category})</span>
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', paddingLeft: '18px' }}>
-                    {item.description}
-                  </div>
-                </div>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 700,
-                    padding: '1px 5px',
-                    borderRadius: '2px',
-                    background: 'var(--credit-bg)',
-                    color: 'var(--credit-text)',
-                    border: '1px solid var(--credit-border)',
-                  }}
-                >
-                  {item.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* RBAC Permission Matrix */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <UserCheck size={14} style={{ color: 'var(--primary-navy)' }} />
-            <span>Executive Role-Based Access Control (RBAC) Matrix</span>
-          </div>
-
-          <div className="table-container" style={{ maxHeight: '340px' }}>
-            <table className="erp-table compact">
-              <thead>
-                <tr>
-                  <th>Workspace Module</th>
-                  <th style={{ width: '60px', textAlign: 'center' }}>CEO</th>
-                  <th style={{ width: '60px', textAlign: 'center' }}>CFO</th>
-                  <th style={{ width: '70px', textAlign: 'center' }}>COO</th>
-                  <th style={{ width: '80px', textAlign: 'center' }}>CTO</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roleMatrix.map((rm, idx) => (
-                  <tr key={idx}>
-                    <td style={{ fontWeight: 600 }}>{rm.module}</td>
-                    <td style={{ textAlign: 'center' }} className="font-mono">{rm.ceo}</td>
-                    <td style={{ textAlign: 'center' }} className="font-mono">{rm.cfo}</td>
-                    <td style={{ textAlign: 'center', fontWeight: 700, color: 'var(--primary-blue)' }} className="font-mono">{rm.coo}</td>
-                    <td style={{ textAlign: 'center', color: rm.cto === 'No Access' ? 'var(--text-subtle)' : 'var(--text-primary)' }} className="font-mono">
-                      {rm.cto}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Immutable Audit Log Table */}
-      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
-          <div>
-            <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-primary)', letterSpacing: '0.03em' }}>
-              Chronological Audit Event Log (Immutable)
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-              Non-repudiation audit trail recording all financial modifications and approvals
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Search size={14} style={{ color: 'var(--text-muted)' }} />
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Search user, action, entity, IP..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{ width: '240px', height: '28px' }}
-            />
-          </div>
-        </div>
-
-        <div className="table-container">
-          <table className={`erp-table ${isCompactMode ? 'compact' : ''}`}>
-            <thead>
-              <tr>
-                <th>Timestamp (UTC)</th>
-                <th>Operator / User</th>
-                <th>Role</th>
-                <th>Action Type</th>
-                <th>Target Entity</th>
-                <th>Audit Details & Parameters</th>
-                <th>Source IP</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map(log => (
-                <tr key={log.id}>
-                  <td className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                    {log.timestamp}
-                  </td>
-                  <td style={{ fontWeight: 600 }}>{log.user}</td>
-                  <td>
-                    <span
-                      style={{
-                        fontSize: '10.5px',
-                        padding: '1px 5px',
-                        background: 'var(--bg-surface-subtle)',
-                        borderRadius: '2px',
-                        border: '1px solid var(--border-subtle)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {log.role}
-                    </span>
-                  </td>
-                  <td>
-                    <code className="font-mono" style={{ fontSize: '11px', color: 'var(--primary-navy)', fontWeight: 600 }}>
-                      {log.action}
-                    </code>
-                  </td>
-                  <td style={{ fontWeight: 600, fontSize: '11.5px' }}>{log.entity}</td>
-                  <td style={{ maxWidth: '400px' }}>
-                    <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                      {log.details}
-                    </div>
-                  </td>
-                  <td className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {log.ipAddress}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+        {auditLogs.map(log => (
+          <View key={log.id} style={styles.tableRow}>
+            <Text style={[styles.cell, styles.monoText, { flex: 1.8, color: colors.textMuted }]}>
+              {log.timestamp}
+            </Text>
+            <View style={{ flex: 1.6 }}>
+              <Text style={[styles.cell, { fontWeight: '700' }]}>{log.user}</Text>
+              <Text style={[styles.monoText, { fontSize: 9.5, color: colors.primaryBlue }]}>{log.role}</Text>
+            </View>
+            <Text style={[styles.cell, styles.monoText, { flex: 1.6, fontWeight: '600' }]}>
+              {log.action}
+            </Text>
+            <Text style={[styles.cell, { flex: 3.5 }]}>{log.details}</Text>
+            <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right', color: colors.textMuted }]}>
+              {log.ipAddress}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  card: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 4,
+    padding: 12,
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textPrimary,
+  },
+  checklistGrid: {
+    gap: 6,
+  },
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 6,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  checkItemTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  checkItemDesc: {
+    fontSize: 10.5,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  catBadge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  catBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  verifiedPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    backgroundColor: colors.creditBg,
+    borderWidth: 1,
+    borderColor: colors.creditBorder,
+    borderRadius: 2,
+  },
+  verifiedText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: colors.creditText,
+    fontFamily: 'Roboto Mono, monospace',
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+});

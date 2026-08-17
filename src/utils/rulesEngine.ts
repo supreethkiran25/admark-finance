@@ -25,7 +25,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-salaries',
-    pattern: 'Gusto|Rippling|Deel|Payroll|Direct Deposit|ADP|Salary Disb|Contractor Payout',
+    pattern: 'RazorpayX|Gusto|Rippling|Deel|Payroll|Direct Deposit|Salary Disb|NEFT Salary|EPFO|ESIC',
     category: 'Salaries',
     department: 'Operations',
     isRegex: true,
@@ -36,7 +36,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-marketing',
-    pattern: 'Google Ads|Meta Ads|LinkedIn Marketing|X Ads|Ahrefs|Semrush|Clearbit|Apollo.io|Segment',
+    pattern: 'Google Ads|Google India|Meta Ads|LinkedIn Marketing|X Ads|Ahrefs|Semrush|Clearbit|Apollo.io|Segment',
     category: 'Marketing',
     department: 'Sales & Marketing',
     isRegex: true,
@@ -47,7 +47,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-travel',
-    pattern: 'Delta|United Airlines|American Airlines|Uber|Lyft|Airbnb|Marriott|Hilton|Expedia|Amtrak',
+    pattern: 'IndiGo|Air India|Vistara|Akasa|Uber|Ola|Airbnb|Marriott|Taj Hotels|ITC Hotels|MakeMyTrip|IRCTC',
     category: 'Travel',
     department: 'Sales & Marketing',
     isRegex: true,
@@ -58,7 +58,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-food',
-    pattern: 'Doordash|Uber Eats|Sweetgreen|Cava|Chipotle|Starbucks|Blue Bottle|Catering|Whole Foods|Dinner',
+    pattern: 'Swiggy|Zomato|Third Wave Coffee|Blue Tokai|Starbucks|Chai Point|Black Pearl|Sweetgreen|Catering|Dinner',
     category: 'Food',
     department: 'Operations',
     isRegex: true,
@@ -69,7 +69,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-equipment',
-    pattern: 'Apple Store|B&H Photo|Dell|Lenovo|Best Buy|Amazon Equipment|Keychron|Herman Miller|Monitor',
+    pattern: 'Apple India|Amazon India|Croma|Reliance Digital|Dell India|Lenovo|Keychron|Herman Miller|Monitor',
     category: 'Equipment',
     department: 'Facilities & IT',
     isRegex: true,
@@ -80,7 +80,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-office',
-    pattern: 'WeWork|Industrious|Staples|Office Depot|FedEx|UPS|Keycard|Desk Supplies|Cleaner',
+    pattern: 'WeWork India|Awfis|IndiQube|Smartworks|Staples|Office Depot|Blue Dart|DTDC|Keycard|Desk Supplies',
     category: 'Office expenses',
     department: 'Operations',
     isRegex: true,
@@ -91,7 +91,7 @@ export const DEFAULT_RULES: CategorizationRule[] = [
   },
   {
     id: 'rule-utilities',
-    pattern: 'Verizon|AT&T|Comcast|ConEd|PG&E|Water Utility|Electric|Fiber Internet|T-Mobile',
+    pattern: 'ACT Fibernet|Airtel Business|Tata Tele|Jio Fiber|BESCOM|Tata Power|BSES|Water Utility|Electricity',
     category: 'Utilities',
     department: 'Facilities & IT',
     isRegex: true,
@@ -145,7 +145,7 @@ export function autoCategorizeMerchant(
         }
       }
     } catch {
-      // Ignore invalid regex in user input
+      // Ignore invalid regex
     }
   }
 

@@ -36,7 +36,10 @@ export interface Expense {
   employee: string;
   department: Department;
   category: ExpenseCategory;
-  amount: number;
+  amount: number; // in INR (₹)
+  gstAmount: number; // in INR (₹)
+  tdsAmount: number; // in INR (₹)
+  tdsSection?: string; // 194J, 194C, etc.
   paymentMethod: string;
   description: string;
   receiptUrl?: string;
@@ -46,6 +49,7 @@ export interface Expense {
   glCode: string;
   projectCode?: string;
   taxAmount: number;
+  gstin?: string;
   notes?: string;
   auditHistory: AuditLogEntry[];
 }
@@ -55,15 +59,16 @@ export interface BankTransaction {
   statementId: string;
   date: string;
   merchant: string;
-  debitAmount: number;
-  creditAmount: number;
-  accountBalance: number;
+  debitAmount: number; // in INR (₹)
+  creditAmount: number; // in INR (₹)
+  accountBalance: number; // in INR (₹)
   referenceNumber: string;
   category: ExpenseCategory;
   reconciliationStatus: 'Matched' | 'Unmatched' | 'Conflict' | 'Auto-Reconciled';
   matchedExpenseId?: string;
   ruleConfidence?: number;
   memo?: string;
+  mode?: 'NEFT' | 'RTGS' | 'IMPS' | 'UPI' | 'POS' | 'ACH';
 }
 
 export interface BankStatement {
@@ -71,12 +76,13 @@ export interface BankStatement {
   fileName: string;
   bankName: string;
   accountNumber: string;
+  ifscCode: string;
   periodStart: string;
   periodEnd: string;
-  openingBalance: number;
-  closingBalance: number;
-  totalDebits: number;
-  totalCredits: number;
+  openingBalance: number; // in INR (₹)
+  closingBalance: number; // in INR (₹)
+  totalDebits: number; // in INR (₹)
+  totalCredits: number; // in INR (₹)
   importedAt: string;
   importedBy: string;
   transactionCount: number;
@@ -113,7 +119,7 @@ export interface EmployeeExpenseClaim {
   department: Department;
   date: string;
   claimType: ReimbursementType;
-  amount: number;
+  amount: number; // in INR (₹)
   receiptAttached: boolean;
   receiptFileName?: string;
   status: ReimbursementStatus;
@@ -127,9 +133,9 @@ export interface DepartmentBudget {
   id: string;
   department: Department;
   fiscalMonth: string; // YYYY-MM
-  allocatedBudget: number;
-  spentAmount: number;
-  committedAmount: number;
+  allocatedBudget: number; // in INR (₹)
+  spentAmount: number; // in INR (₹)
+  committedAmount: number; // in INR (₹)
   notes?: string;
   lastUpdated: string;
 }
@@ -141,11 +147,15 @@ export interface Vendor {
   department: Department;
   contactEmail: string;
   paymentTerms: 'Net 15' | 'Net 30' | 'Net 60' | 'Monthly Auto-Debit' | 'Due on Receipt';
-  outstandingBalance: number;
-  totalYtdSpend: number;
+  outstandingBalance: number; // in INR (₹)
+  totalYtdSpend: number; // in INR (₹)
   contractRenewalDate: string;
-  taxId: string;
-  w9OnFile: boolean;
+  gstin: string; // Indian GSTIN (e.g. 29AABCU9603R1ZM)
+  pan: string; // Indian PAN
+  tdsApplicable: boolean;
+  tdsRate: number; // e.g. 10%
+  msmeRegistered: boolean;
+  w9OnFile: boolean; // compliance doc on file
   status: 'Active' | 'Under Review' | 'Paused';
   paymentMethod: string;
 }
@@ -153,9 +163,10 @@ export interface Vendor {
 export interface InvoiceLineItem {
   id: string;
   description: string;
+  hsnSacCode?: string; // SAC Code e.g. 998314
   quantity: number;
-  unitPrice: number;
-  total: number;
+  unitPrice: number; // in INR (₹)
+  total: number; // in INR (₹)
 }
 
 export type InvoiceType = 'Accounts Payable' | 'Accounts Receivable';
@@ -167,10 +178,16 @@ export interface Invoice {
   type: InvoiceType;
   partyName: string;
   contactEmail: string;
+  gstin: string;
+  placeOfSupply: string; // e.g. Karnataka (29), Maharashtra (27)
   issueDate: string;
   dueDate: string;
-  amount: number;
-  taxAmount: number;
+  amount: number; // in INR (₹) - Gross total
+  subtotal: number; // in INR (₹) - Base taxable
+  cgstAmount: number; // in INR (₹)
+  sgstAmount: number; // in INR (₹)
+  igstAmount: number; // in INR (₹)
+  taxAmount: number; // in INR (₹)
   status: InvoiceStatus;
   lineItems: InvoiceLineItem[];
   paymentReference?: string;

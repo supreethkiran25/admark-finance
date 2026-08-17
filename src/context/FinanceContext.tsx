@@ -87,6 +87,7 @@ interface FinanceContextType {
   addVendor: (vendor: Omit<Vendor, 'id' | 'totalYtdSpend'>) => void;
   updateVendor: (id: string, updates: Partial<Vendor>) => void;
   recordVendorPayment: (vendorId: string, amount: number) => void;
+  payVendor: (vendorId: string, amount: number) => void;
 
   // Invoices
   invoices: Invoice[];
@@ -97,6 +98,8 @@ interface FinanceContextType {
   claims: EmployeeExpenseClaim[];
   addClaim: (claim: Omit<EmployeeExpenseClaim, 'id' | 'claimNumber' | 'submittedAt'>) => void;
   updateClaimStatus: (id: string, status: ReimbursementStatus) => void;
+  approveClaim: (id: string) => void;
+  rejectClaim: (id: string) => void;
 
   // Audit Logs
   auditLogs: AuditRecord[];
@@ -505,6 +508,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       department: catResult.department,
       category: catResult.category,
       amount: tx.debitAmount > 0 ? tx.debitAmount : tx.creditAmount,
+      gstAmount: 0,
+      tdsAmount: 0,
       paymentMethod: 'Corporate Card / Bank Debit',
       description: tx.merchant,
       status: 'Approved',
@@ -636,6 +641,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
       department: target.department,
       category: target.category,
       amount,
+      gstAmount: 0,
+      tdsAmount: 0,
       paymentMethod: target.paymentMethod,
       description: `Payment Disbursement - ${target.name}`,
       status: 'Approved',
@@ -715,6 +722,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         department: target.department,
         category: target.claimType === 'Travel Reimbursement' ? 'Travel' : target.claimType === 'Food & Per Diem' ? 'Food' : target.claimType === 'Equipment Purchase' ? 'Equipment' : 'Office expenses',
         amount: target.amount,
+        gstAmount: 0,
+        tdsAmount: 0,
         paymentMethod: 'Employee Reimbursement ACH',
         description: `Reimbursement ${target.claimNumber}: ${target.description}`,
         status: 'Approved',
@@ -733,13 +742,17 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
+  const approveClaim = (id: string) => updateClaimStatus(id, 'Approved');
+  const rejectClaim = (id: string) => updateClaimStatus(id, 'Rejected');
+  const payVendor = (vendorId: string, amount: number) => recordVendorPayment(vendorId, amount);
+
   // CTO filter: Technology expenses only
   const filteredExpenses = currentRole === 'CTO'
     ? expenses.filter(e => e.isTechExpense || ['Cloud services', 'Software subscriptions', 'Equipment'].includes(e.category) || e.department === 'Engineering')
     : expenses;
 
   // Computed Financial Overview Figures
-  const cashBalance = 1428500.42;
+  const cashBalance = 14285500.42; // ₹1.43 Crore HDFC/ICICI Treasury
   
   const todaySpend = expenses
     .filter(e => e.date === '2026-08-16' && e.status === 'Approved')
@@ -804,12 +817,15 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addVendor,
         updateVendor,
         recordVendorPayment,
+        payVendor,
         invoices,
         addInvoice,
         updateInvoiceStatus,
         claims,
         addClaim,
         updateClaimStatus,
+        approveClaim,
+        rejectClaim,
         auditLogs,
         logAudit,
         toasts,

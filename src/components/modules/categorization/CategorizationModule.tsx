@@ -1,33 +1,23 @@
 import React, { useState } from 'react';
-import {
-  Plus,
-  Sliders,
-  RefreshCw,
-  Search,
-  Check,
-  Trash2,
-  Edit3,
-  Play,
-  CheckCircle2,
-  Sparkles,
-} from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { Plus, RefreshCw, Search, Trash2, Edit3 } from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
 import { CategorizationRule, ExpenseCategory, Department } from '../../../types/finance';
 import { Modal } from '../../common/Modal';
 import { autoCategorizeMerchant } from '../../../utils/rulesEngine';
+import { colors } from '../../../theme/colors';
 
 export const CategorizationModule: React.FC = () => {
-  const { rules, addRule, updateRule, deleteRule, reapplyAllRules, isCompactMode } = useFinance();
+  const { rules, addRule, updateRule, deleteRule, reapplyAllRules } = useFinance();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingRule, setEditingRule] = useState<CategorizationRule | null>(null);
 
   // Live Simulator State
-  const [testMerchant, setTestMerchant] = useState('AWS EC2 Compute & Kubernetes us-east-1');
+  const [testMerchant, setTestMerchant] = useState('AWS INDIA SERVICES MUMBAI AP-SOUTH-1');
   const testResult = autoCategorizeMerchant(testMerchant, rules);
 
-  // Form State
   const initialFormState = {
     pattern: '',
     category: 'Software subscriptions' as ExpenseCategory,
@@ -70,22 +60,9 @@ export const CategorizationModule: React.FC = () => {
     );
   });
 
-  const openEditModal = (rule: CategorizationRule) => {
-    setEditingRule(rule);
-    setFormData({
-      pattern: rule.pattern,
-      category: rule.category,
-      department: rule.department,
-      isRegex: rule.isRegex,
-      priority: rule.priority,
-      isActive: rule.isActive,
-    });
-  };
-
-  const handleSaveRule = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveRule = () => {
     if (!formData.pattern.trim()) {
-      alert('Please provide a keyword or regex pattern.');
+      alert('Please enter a matching pattern.');
       return;
     }
 
@@ -115,241 +92,125 @@ export const CategorizationModule: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Automatic Categorization & GL Rules Engine
-          </h1>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Deterministic pattern matching algorithms that automatically assign categories and departments to transactions.
-          </p>
-        </div>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title Ribbon */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <Text style={styles.pageTitle}>Automatic Categorization & GL Rules Engine</Text>
+          <Text style={styles.pageSubtitle}>
+            Deterministic pattern matching algorithms mapping Indian and global merchants to standard chart of accounts.
+          </Text>
+        </View>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => reapplyAllRules()}
-            title="Re-run rules engine across all existing ledger records"
+        <View style={styles.actionGroup}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => reapplyAllRules()}
           >
-            <RefreshCw size={13} />
-            <span>Re-apply Rules to Ledger</span>
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
+            <RefreshCw size={13} color="#fff" />
+            <Text style={styles.primaryBtnText}>Re-apply Rules to Ledger</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => {
               setFormData(initialFormState);
               setIsAddModalOpen(true);
             }}
           >
-            <Plus size={13} />
-            <span>+ Add Rule</span>
-          </button>
-        </div>
-      </div>
+            <Plus size={13} color={colors.textPrimary} />
+            <Text style={styles.secondaryBtnText}>+ Add Rule</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* Interactive Rule Simulator Sandbox */}
-      <div
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '12px 14px',
-          marginBottom: '14px',
-        }}
-      >
-        <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-          Rule Engine Simulator (Test Categorization Accuracy)
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Type merchant string to test rule matches..."
-              value={testMerchant}
-              onChange={e => setTestMerchant(e.target.value)}
-              style={{ height: '30px', fontSize: '12px' }}
-            />
-          </div>
-
-          <div
-            style={{
-              padding: '6px 12px',
-              background: 'var(--bg-surface-alt)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-xs)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '11.5px',
-            }}
-          >
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Mapped Category: </span>
-              <strong>{testResult.category}</strong>
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Dept: </span>
-              <strong>{testResult.department}</strong>
-            </div>
-            <div>
-              <span style={{ color: 'var(--text-muted)' }}>Confidence: </span>
-              <strong className="num-val" style={{ color: testResult.confidence >= 0.9 ? 'var(--credit-text)' : 'var(--pending-text)' }}>
-                {(testResult.confidence * 100).toFixed(0)}%
-              </strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Rules Search Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, maxWidth: '400px' }}>
-          <Search size={14} style={{ color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Search pattern, category, or department..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            style={{ height: '28px' }}
+      {/* Simulator Sandbox */}
+      <View style={styles.sandboxCard}>
+        <Text style={styles.sandboxTitle}>Rule Engine Simulator (Test Categorization Accuracy)</Text>
+        <View style={styles.sandboxGrid}>
+          <TextInput
+            style={styles.sandboxInput}
+            value={testMerchant}
+            onChangeText={setTestMerchant}
+            placeholder="Type merchant narration to test match..."
           />
-        </div>
-        <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-          {filteredRules.length} Active Automation Rules
-        </div>
-      </div>
+          <View style={styles.matchOutcome}>
+            <Text style={styles.matchText}>
+              Category: <Text style={{ fontWeight: '700' }}>{testResult.category}</Text> • Dept:{' '}
+              <Text style={{ fontWeight: '700' }}>{testResult.department}</Text> • Confidence:{' '}
+              <Text style={{ fontWeight: '700', color: testResult.confidence >= 0.9 ? colors.creditText : colors.pendingText }}>
+                {(testResult.confidence * 100).toFixed(0)}%
+              </Text>
+            </Text>
+          </View>
+        </View>
+      </View>
 
       {/* Rules Table */}
-      <div className="table-container">
-        <table className={`erp-table ${isCompactMode ? 'compact' : ''}`}>
-          <thead>
-            <tr>
-              <th style={{ width: '60px' }}>Priority</th>
-              <th>Keyword / Regex Pattern</th>
-              <th>Target Category</th>
-              <th>Target Department</th>
-              <th>Match Type</th>
-              <th className="table-align-right">Matches Logged</th>
-              <th>Status</th>
-              <th className="table-align-center" style={{ width: '100px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredRules.map(rule => (
-              <tr key={rule.id}>
-                <td className="font-mono" style={{ textAlign: 'center', fontWeight: 600 }}>
-                  P{rule.priority}
-                </td>
-                <td style={{ maxWidth: '380px' }}>
-                  <code
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '11.5px',
-                      background: 'var(--bg-surface-subtle)',
-                      padding: '2px 6px',
-                      borderRadius: '2px',
-                      border: '1px solid var(--border-subtle)',
-                      display: 'inline-block',
-                      maxWidth: '100%',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {rule.pattern}
-                  </code>
-                </td>
-                <td>
-                  <span style={{ fontWeight: 600 }}>{rule.category}</span>
-                </td>
-                <td>
-                  <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>{rule.department}</span>
-                </td>
-                <td>
-                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {rule.isRegex ? 'Regex Pattern' : 'Substring Match'}
-                  </span>
-                </td>
-                <td className="table-align-right font-mono" style={{ fontWeight: 600 }}>
-                  {rule.matchCount}
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    onClick={() => updateRule(rule.id, { isActive: !rule.isActive })}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
-                      cursor: 'pointer',
-                      padding: 0,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: '10.5px',
-                        padding: '1px 6px',
-                        borderRadius: '2px',
-                        fontWeight: 600,
-                        background: rule.isActive ? 'var(--credit-bg)' : 'var(--neutral-pill-bg)',
-                        color: rule.isActive ? 'var(--credit-text)' : 'var(--text-muted)',
-                        border: `1px solid ${rule.isActive ? 'var(--credit-border)' : 'var(--border-subtle)'}`,
-                      }}
-                    >
-                      {rule.isActive ? 'Active' : 'Disabled'}
-                    </span>
-                  </button>
-                </td>
-                <td className="table-align-center">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-icon-only"
-                      onClick={() => openEditModal(rule)}
-                      title="Edit Rule"
-                    >
-                      <Edit3 size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-danger btn-icon-only"
-                      onClick={() => {
-                        if (confirm(`Delete rule for "${rule.pattern}"?`)) {
-                          deleteRule(rule.id);
-                        }
-                      }}
-                      title="Delete Rule"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.cell, { flex: 0.8, fontWeight: '700', textAlign: 'center' }]}>Prio</Text>
+          <Text style={[styles.cell, { flex: 4, fontWeight: '700' }]}>Keyword / Regex Pattern</Text>
+          <Text style={[styles.cell, { flex: 2, fontWeight: '700' }]}>Target Category</Text>
+          <Text style={[styles.cell, { flex: 1.5, fontWeight: '700' }]}>Dept</Text>
+          <Text style={[styles.cell, { flex: 1, textAlign: 'right', fontWeight: '700' }]}>Matches</Text>
+          <Text style={[styles.cell, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>Status</Text>
+          <Text style={[styles.cell, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>Actions</Text>
+        </View>
+
+        {filteredRules.map(rule => (
+          <View key={rule.id} style={styles.tableRow}>
+            <Text style={[styles.cell, styles.monoText, { flex: 0.8, textAlign: 'center' }]}>P{rule.priority}</Text>
+            <View style={{ flex: 4 }}>
+              <Text style={[styles.cell, styles.monoText, { color: colors.primaryNavy, fontWeight: '600' }]}>
+                {rule.pattern}
+              </Text>
+            </View>
+            <Text style={[styles.cell, { flex: 2, fontWeight: '700' }]}>{rule.category}</Text>
+            <Text style={[styles.cell, { flex: 1.5, color: colors.textSecondary }]}>{rule.department}</Text>
+            <Text style={[styles.cell, styles.monoText, { flex: 1, textAlign: 'right', fontWeight: '700' }]}>
+              {rule.matchCount}
+            </Text>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <TouchableOpacity
+                onPress={() => updateRule(rule.id, { isActive: !rule.isActive })}
+                style={[styles.statusPill, rule.isActive ? styles.statusActive : styles.statusInactive]}
+              >
+                <Text style={[styles.statusPillText, rule.isActive ? { color: colors.creditText } : { color: colors.textMuted }]}>
+                  {rule.isActive ? 'Active' : 'Disabled'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 3 }}>
+              <TouchableOpacity
+                style={styles.iconBtnSm}
+                onPress={() => {
+                  setEditingRule(rule);
+                  setFormData({
+                    pattern: rule.pattern,
+                    category: rule.category,
+                    department: rule.department,
+                    isRegex: rule.isRegex,
+                    priority: rule.priority,
+                    isActive: rule.isActive,
+                  });
+                }}
+              >
+                <Edit3 size={11} color={colors.textSecondary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.iconBtnSm}
+                onPress={() => {
+                  if (confirm(`Delete rule for ${rule.pattern}?`)) {
+                    deleteRule(rule.id);
+                  }
+                }}
+              >
+                <Trash2 size={11} color={colors.debitText} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+      </View>
 
       {/* Add / Edit Rule Modal */}
       <Modal
@@ -358,97 +219,243 @@ export const CategorizationModule: React.FC = () => {
           setIsAddModalOpen(false);
           setEditingRule(null);
         }}
-        title={editingRule ? 'Edit Categorization Rule' : 'Create Automatic Categorization Rule'}
-        subtitle="Match payee descriptions to standard chart of accounts"
+        title={editingRule ? 'Edit Automation Rule' : 'Create Automatic Categorization Rule'}
+        subtitle="Match payee descriptions to standard Indian chart of accounts"
         size="md"
         footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => {
                 setIsAddModalOpen(false);
                 setEditingRule(null);
               }}
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSaveRule}
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleSaveRule}
             >
-              {editingRule ? 'Save Rule' : 'Create Rule'}
-            </button>
-          </div>
+              <Text style={styles.primaryBtnText}>{editingRule ? 'Save Rule' : 'Create Rule'}</Text>
+            </TouchableOpacity>
+          </View>
         }
       >
-        <form onSubmit={handleSaveRule} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div className="form-group">
-            <label className="form-label">Merchant Matching Pattern (Keyword or Regex) *</label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. AWS|Amazon Web Services|EC2"
-              className="form-input font-mono"
+        <View style={{ gap: 10 }}>
+          <View>
+            <Text style={styles.formLabel}>Merchant Pattern (Pipe separated) *</Text>
+            <TextInput
+              style={[styles.input, styles.monoText]}
+              placeholder="e.g. AWS INDIA|AMAZON WEB SERVICES"
               value={formData.pattern}
-              onChange={e => setFormData({ ...formData, pattern: e.target.value })}
+              onChangeText={v => setFormData({ ...formData, pattern: v })}
             />
-            <span className="form-hint">Use pipe | to separate multiple keywords. Case-insensitive.</span>
-          </div>
+          </View>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Target Expense Category *</label>
-              <select
-                className="form-select"
+          <View style={styles.formRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>Target Category</Text>
+              <TextInput
+                style={styles.input}
                 value={formData.category}
-                onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
-              >
-                {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Target Department *</label>
-              <select
-                className="form-select"
-                value={formData.department}
-                onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
-              >
-                {departments.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Rule Priority (1 - 10)</label>
-              <input
-                type="number"
-                min="1"
-                max="10"
-                className="form-input font-mono"
-                value={formData.priority}
-                onChange={e => setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })}
+                onChangeText={v => setFormData({ ...formData, category: v as ExpenseCategory })}
               />
-            </div>
-            <div className="form-group" style={{ justifyContent: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '16px' }}>
-                <input
-                  type="checkbox"
-                  checked={formData.isActive}
-                  onChange={e => setFormData({ ...formData, isActive: e.target.checked })}
-                />
-                <span style={{ fontSize: '12px', fontWeight: 600 }}>Rule Active</span>
-              </label>
-            </div>
-          </div>
-        </form>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>Target Department</Text>
+              <TextInput
+                style={styles.input}
+                value={formData.department}
+                onChangeText={v => setFormData({ ...formData, department: v as Department })}
+              />
+            </View>
+          </View>
+        </View>
       </Modal>
-    </div>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryNavy,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  secondaryBtnText: {
+    color: colors.textPrimary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  sandboxCard: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 4,
+    padding: 12,
+    gap: 8,
+  },
+  sandboxTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  sandboxGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+  sandboxInput: {
+    flex: 1.4,
+    minWidth: 260,
+    height: 30,
+    backgroundColor: colors.bgSurfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    fontFamily: 'Roboto Mono, monospace',
+  },
+  matchOutcome: {
+    flex: 1,
+    minWidth: 240,
+    padding: 7,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+  },
+  matchText: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  statusPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 2,
+    borderWidth: 1,
+  },
+  statusActive: {
+    backgroundColor: colors.creditBg,
+    borderColor: colors.creditBorder,
+  },
+  statusInactive: {
+    backgroundColor: colors.neutralPillBg,
+    borderColor: colors.neutralPillBorder,
+  },
+  statusPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  iconBtnSm: {
+    padding: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  formLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 3,
+  },
+  input: {
+    height: 28,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    outlineStyle: 'none' as any,
+  },
+});

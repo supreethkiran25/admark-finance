@@ -1,8 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
+import {
   Plus,
   Search,
-  Filter,
   Download,
   Check,
   X,
@@ -13,8 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   FileSpreadsheet,
-  ArrowUpDown,
-} from 'lucide-react';
+} from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
 import {
   Expense,
@@ -28,6 +34,7 @@ import { Drawer } from '../../common/Drawer';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
 import { exportExpensesToCSV } from '../../../utils/csvParser';
+import { colors } from '../../../theme/colors';
 
 export const ExpenseManagement: React.FC = () => {
   const {
@@ -39,34 +46,22 @@ export const ExpenseManagement: React.FC = () => {
     bulkUpdateExpenseCategory,
     bulkDeleteExpenses,
     isCompactMode,
-    currentRole,
   } = useFinance();
 
-  // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState<string>('ALL');
   const [selectedCat, setSelectedCat] = useState<string>('ALL');
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');
-  const [dateRange, setDateRange] = useState<string>('ALL'); // ALL | THIS_MONTH | LAST_MONTH | THIS_WEEK
 
-  // Sorting
-  const [sortField, setSortField] = useState<keyof Expense>('date');
-  const [sortAsc, setSortAsc] = useState(false);
-
-  // Selection for bulk actions
+  // Multi-selection
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   // Modals & Drawers
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [inspectingExpense, setInspectingExpense] = useState<Expense | null>(null);
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
-  // Bulk category modal
-  const [bulkCatModalOpen, setBulkCatModalOpen] = useState(false);
-  const [bulkTargetCat, setBulkTargetCat] = useState<ExpenseCategory>('Software subscriptions');
-
-  // Form State for Add/Edit
+  // Form State
   const initialFormState = {
     date: new Date().toISOString().split('T')[0],
     employee: 'Rachel Green',
@@ -74,12 +69,13 @@ export const ExpenseManagement: React.FC = () => {
     category: 'Software subscriptions' as ExpenseCategory,
     amount: '',
     taxAmount: '0.00',
-    paymentMethod: 'Corporate Card - SVB 4821',
+    paymentMethod: 'Corporate Card - HDFC 4821',
     description: '',
     receiptFileName: '',
     status: 'Approved' as ExpenseStatus,
     glCode: 'GL-6420-SAAS',
     projectCode: 'PRJ-INTERNAL-OPS',
+    gstin: '29AABCU9603R1ZM',
     notes: '',
   };
   const [formData, setFormData] = useState(initialFormState);
@@ -107,67 +103,31 @@ export const ExpenseManagement: React.FC = () => {
   ];
 
   const paymentMethods = [
-    'Corporate Card - SVB 4821',
-    'Corporate Card - Chase 9012',
-    'ACH Wire Transfer',
-    'Direct Deposit (Payroll)',
+    'Corporate Card - HDFC 4821',
+    'Corporate Card - ICICI 9012',
+    'NEFT / RTGS Transfer',
+    'IMPS Instant Clearing',
+    'Direct Deposit (Salary Account)',
     'Vendor Net-30',
-    'Employee Reimbursement ACH',
   ];
 
-  // Filtering & Sorting
   const processedExpenses = useMemo(() => {
-    return filteredExpenses
-      .filter(exp => {
-        // Search query
-        if (searchQuery.trim()) {
-          const q = searchQuery.toLowerCase();
-          const match =
-            exp.description.toLowerCase().includes(q) ||
-            exp.referenceNumber.toLowerCase().includes(q) ||
-            exp.employee.toLowerCase().includes(q) ||
-            exp.glCode.toLowerCase().includes(q) ||
-            (exp.projectCode && exp.projectCode.toLowerCase().includes(q));
-          if (!match) return false;
-        }
-
-        // Department filter
-        if (selectedDept !== 'ALL' && exp.department !== selectedDept) return false;
-
-        // Category filter
-        if (selectedCat !== 'ALL' && exp.category !== selectedCat) return false;
-
-        // Status filter
-        if (selectedStatus !== 'ALL' && exp.status !== selectedStatus) return false;
-
-        // Date range
-        if (dateRange === 'THIS_MONTH' && !exp.date.startsWith('2026-08')) return false;
-        if (dateRange === 'THIS_WEEK' && exp.date < '2026-08-10') return false;
-
-        return true;
-      })
-      .sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
-
-        if (typeof valA === 'number' && typeof valB === 'number') {
-          return sortAsc ? valA - valB : valB - valA;
-        }
-
-        valA = String(valA || '').toLowerCase();
-        valB = String(valB || '').toLowerCase();
-        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-      });
-  }, [filteredExpenses, searchQuery, selectedDept, selectedCat, selectedStatus, dateRange, sortField, sortAsc]);
-
-  // Selection handlers
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedIds(processedExpenses.map(e => e.id));
-    } else {
-      setSelectedIds([]);
-    }
-  };
+    return filteredExpenses.filter(exp => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const match =
+          exp.description.toLowerCase().includes(q) ||
+          exp.referenceNumber.toLowerCase().includes(q) ||
+          exp.employee.toLowerCase().includes(q) ||
+          exp.glCode.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+      if (selectedDept !== 'ALL' && exp.department !== selectedDept) return false;
+      if (selectedCat !== 'ALL' && exp.category !== selectedCat) return false;
+      if (selectedStatus !== 'ALL' && exp.status !== selectedStatus) return false;
+      return true;
+    });
+  }, [filteredExpenses, searchQuery, selectedDept, selectedCat, selectedStatus]);
 
   const handleSelectOne = (id: string) => {
     setSelectedIds(prev =>
@@ -175,17 +135,6 @@ export const ExpenseManagement: React.FC = () => {
     );
   };
 
-  // Sort handler
-  const handleSort = (field: keyof Expense) => {
-    if (sortField === field) {
-      setSortAsc(!sortAsc);
-    } else {
-      setSortField(field);
-      setSortAsc(true);
-    }
-  };
-
-  // Open Edit Modal
   const openEditModal = (exp: Expense) => {
     setEditingExpense(exp);
     setFormData({
@@ -201,23 +150,22 @@ export const ExpenseManagement: React.FC = () => {
       status: exp.status,
       glCode: exp.glCode,
       projectCode: exp.projectCode || '',
+      gstin: exp.gstin || '',
       notes: exp.notes || '',
     });
   };
 
-  // Save Add/Edit
-  const handleSaveExpense = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveExpense = () => {
     const parsedAmount = parseFloat(formData.amount);
     const parsedTax = parseFloat(formData.taxAmount) || 0;
 
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      alert('Please enter a valid expense amount.');
+      alert('Please enter a valid expense amount in INR (₹).');
       return;
     }
 
     if (!formData.description.trim()) {
-      alert('Please enter a description or payee name.');
+      alert('Please enter a payee description.');
       return;
     }
 
@@ -235,6 +183,7 @@ export const ExpenseManagement: React.FC = () => {
         status: formData.status,
         glCode: formData.glCode,
         projectCode: formData.projectCode || undefined,
+        gstin: formData.gstin || undefined,
         notes: formData.notes,
         isTechExpense: ['Cloud services', 'Software subscriptions', 'Equipment'].includes(formData.category),
       });
@@ -246,13 +195,16 @@ export const ExpenseManagement: React.FC = () => {
         department: formData.department,
         category: formData.category,
         amount: parsedAmount,
+        gstAmount: parsedTax,
+        tdsAmount: 0,
         taxAmount: parsedTax,
         paymentMethod: formData.paymentMethod,
         description: formData.description,
-        receiptFileName: formData.receiptFileName || 'Receipt_Attached.pdf',
+        receiptFileName: formData.receiptFileName || 'GST_Invoice_Attached.pdf',
         status: formData.status,
         glCode: formData.glCode || `GL-${formData.category.substring(0, 4).toUpperCase()}`,
         projectCode: formData.projectCode || undefined,
+        gstin: formData.gstin || undefined,
         notes: formData.notes,
         isTechExpense: ['Cloud services', 'Software subscriptions', 'Equipment'].includes(formData.category),
       });
@@ -265,421 +217,197 @@ export const ExpenseManagement: React.FC = () => {
   const totalFilteredAmount = processedExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Title & Actions Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '12px',
-          paddingBottom: '8px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Operational Expense Ledger & Management
-          </h1>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Enterprise General Ledger recording, receipt verification, status approvals, and GL allocations.
-          </p>
-        </div>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title & Action Bar */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <Text style={styles.pageTitle}>Operational Expense Ledger & Management (INR - ₹)</Text>
+          <Text style={styles.pageSubtitle}>
+            General Ledger recording, GST input credit compliance, digital receipts, and GL allocations.
+          </Text>
+        </View>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => exportExpensesToCSV(processedExpenses)}
-            title="Export filtered records to CSV"
+        <View style={styles.actionGroup}>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => exportExpensesToCSV(processedExpenses)}
           >
-            <Download size={13} />
-            <span>Export CSV</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => {
+            <Download size={13} color={colors.textPrimary} />
+            <Text style={styles.secondaryBtnText}>Export CSV</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => {
               setFormData(initialFormState);
               setIsAddModalOpen(true);
             }}
           >
-            <Plus size={13} />
-            <span>+ Record Expense</span>
-          </button>
-        </div>
-      </div>
+            <Plus size={13} color="#fff" />
+            <Text style={styles.primaryBtnText}>+ Record Expense (₹)</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* Filter Ribbon & Persistent Search */}
-      <div
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '8px 12px',
-          marginBottom: '12px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-        }}
-      >
-        {/* Search */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '260px', flex: 1 }}>
-          <Search size={14} style={{ color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Search description, ref #, employee, GL code..."
+      {/* Filter Bar */}
+      <View style={styles.filterCard}>
+        <View style={styles.searchBox}>
+          <Search size={14} color={colors.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search description, ref #, employee, GL..."
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            style={{ height: '28px', fontSize: '11.5px' }}
+            onChangeText={setSearchQuery}
           />
-          {searchQuery && (
-            <button
-              type="button"
-              className="btn btn-sm btn-icon-only"
-              onClick={() => setSearchQuery('')}
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
+          {searchQuery ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={13} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
 
-        {/* Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Dept:</span>
-            <select
-              className="form-select"
-              style={{ width: '130px', height: '28px', fontSize: '11px' }}
-              value={selectedDept}
-              onChange={e => setSelectedDept(e.target.value)}
+        <View style={styles.filterRow}>
+          {/* Department filter pills */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 4 }}>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedDept === 'ALL' && styles.filterChipActive]}
+              onPress={() => setSelectedDept('ALL')}
             >
-              <option value="ALL">All Departments</option>
-              {departments.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+              <Text style={[styles.filterChipText, selectedDept === 'ALL' && styles.filterChipTextActive]}>All Depts</Text>
+            </TouchableOpacity>
+            {departments.map(d => (
+              <TouchableOpacity
+                key={d}
+                style={[styles.filterChip, selectedDept === d && styles.filterChipActive]}
+                onPress={() => setSelectedDept(d)}
+              >
+                <Text style={[styles.filterChipText, selectedDept === d && styles.filterChipTextActive]}>{d}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Category:</span>
-            <select
-              className="form-select"
-              style={{ width: '140px', height: '28px', fontSize: '11px' }}
-              value={selectedCat}
-              onChange={e => setSelectedCat(e.target.value)}
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Status:</span>
-            <select
-              className="form-select"
-              style={{ width: '120px', height: '28px', fontSize: '11px' }}
-              value={selectedStatus}
-              onChange={e => setSelectedStatus(e.target.value)}
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="Approved">Approved</option>
-              <option value="Pending Approval">Pending Approval</option>
-              <option value="Under Review">Under Review</option>
-              <option value="Rejected">Rejected</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Period:</span>
-            <select
-              className="form-select"
-              style={{ width: '110px', height: '28px', fontSize: '11px' }}
-              value={dateRange}
-              onChange={e => setDateRange(e.target.value)}
-            >
-              <option value="ALL">All Time</option>
-              <option value="THIS_MONTH">Aug 2026</option>
-              <option value="THIS_WEEK">This Week</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Bulk Action Controls Bar (Active when items selected) */}
+      {/* Bulk Action Controls */}
       {selectedIds.length > 0 && (
-        <div
-          style={{
-            background: '#f0f7ff',
-            border: '1px solid var(--info-border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '6px 12px',
-            marginBottom: '10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            animation: 'fadeIn 0.12s ease',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', fontWeight: 600, color: 'var(--info-text)' }}>
-            <span>{selectedIds.length} expense(s) selected</span>
-            <span style={{ color: 'var(--text-muted)' }}>•</span>
-            <span className="num-val">
-              Total: {formatCurrency(
-                filteredExpenses.filter(e => selectedIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)
-              )}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <button
-              type="button"
-              className="btn btn-sm btn-success"
-              onClick={() => {
+        <View style={styles.bulkBanner}>
+          <Text style={styles.bulkText}>
+            {selectedIds.length} expense(s) selected • Total: {formatCurrency(
+              filteredExpenses.filter(e => selectedIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)
+            )}
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.bulkBtnSuccess}
+              onPress={() => {
                 bulkUpdateExpenseStatus(selectedIds, 'Approved');
                 setSelectedIds([]);
               }}
             >
-              <Check size={12} />
-              <span>Bulk Approve</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-danger"
-              onClick={() => {
-                bulkUpdateExpenseStatus(selectedIds, 'Rejected');
-                setSelectedIds([]);
-              }}
-            >
-              <X size={12} />
-              <span>Bulk Reject</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => setBulkCatModalOpen(true)}
-            >
-              <Sliders size={12} />
-              <span>Re-categorize</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm btn-danger"
-              onClick={() => {
-                if (confirm(`Permanently delete ${selectedIds.length} selected expense(s)?`)) {
+              <Check size={11} color={colors.creditText} />
+              <Text style={styles.bulkBtnSuccessText}>Approve</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.bulkBtnDanger}
+              onPress={() => {
+                if (confirm(`Delete ${selectedIds.length} expenses?`)) {
                   bulkDeleteExpenses(selectedIds);
                   setSelectedIds([]);
                 }
               }}
             >
-              <Trash2 size={12} />
-              <span>Delete</span>
-            </button>
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => setSelectedIds([])}
+              <Trash2 size={11} color={colors.debitText} />
+              <Text style={styles.bulkBtnDangerText}>Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.smBtn}
+              onPress={() => setSelectedIds([])}
             >
-              Clear Selection
-            </button>
-          </div>
-        </div>
+              <Text style={styles.smBtnText}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
-      {/* Expense Data Table */}
-      <div className="table-container">
-        <table className={`erp-table ${isCompactMode ? 'compact' : ''}`}>
-          <thead>
-            <tr>
-              <th style={{ width: '32px', textAlign: 'center' }}>
-                <input
-                  type="checkbox"
-                  checked={selectedIds.length > 0 && selectedIds.length === processedExpenses.length}
-                  onChange={e => handleSelectAll(e.target.checked)}
-                />
-              </th>
-              <th className="sortable" onClick={() => handleSort('referenceNumber')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Ref #</span>
-                  {sortField === 'referenceNumber' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th className="sortable" onClick={() => handleSort('date')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Date</span>
-                  {sortField === 'date' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th className="sortable" onClick={() => handleSort('description')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Payee / Description</span>
-                  {sortField === 'description' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th className="sortable" onClick={() => handleSort('employee')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Employee</span>
-                  {sortField === 'employee' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th className="sortable" onClick={() => handleSort('department')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Department</span>
-                  {sortField === 'department' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th className="sortable" onClick={() => handleSort('category')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>Category</span>
-                  {sortField === 'category' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th className="sortable table-align-right" onClick={() => handleSort('amount')}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
-                  <span>Amount (USD)</span>
-                  {sortField === 'amount' && (sortAsc ? <ChevronUp size={11} /> : <ChevronDown size={11} />)}
-                </div>
-              </th>
-              <th>GL Code</th>
-              <th>Status</th>
-              <th className="table-align-center" style={{ width: '90px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {processedExpenses.length === 0 ? (
-              <tr>
-                <td colSpan={11} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                  No expense records found matching the active filter criteria.
-                </td>
-              </tr>
-            ) : (
-              processedExpenses.map(exp => {
-                const isSelected = selectedIds.includes(exp.id);
-                return (
-                  <tr key={exp.id} className={isSelected ? 'row-selected' : ''}>
-                    <td style={{ textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleSelectOne(exp.id)}
-                      />
-                    </td>
-                    <td className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {exp.referenceNumber}
-                    </td>
-                    <td className="font-mono" style={{ whiteSpace: 'nowrap' }}>
-                      {formatDate(exp.date)}
-                    </td>
-                    <td style={{ maxWidth: '280px' }}>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          color: 'var(--text-primary)',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => setInspectingExpense(exp)}
-                        title="Click to view details"
-                      >
-                        {exp.description}
-                      </div>
-                      {exp.projectCode && (
-                        <div className="font-mono" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                          Prj: {exp.projectCode}
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '11.5px' }}>{exp.employee}</span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{exp.department}</span>
-                    </td>
-                    <td>
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          padding: '1px 5px',
-                          background: 'var(--bg-surface-subtle)',
-                          borderRadius: '2px',
-                          border: '1px solid var(--border-subtle)',
-                        }}
-                      >
-                        {exp.category}
-                      </span>
-                    </td>
-                    <td className="table-align-right num-val" style={{ fontWeight: 600, fontSize: '12.5px' }}>
-                      {formatCurrency(exp.amount)}
-                    </td>
-                    <td className="font-mono" style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                      {exp.glCode}
-                    </td>
-                    <td>
-                      <Badge status={exp.status} size="sm" />
-                    </td>
-                    <td className="table-align-center">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-icon-only"
-                          onClick={() => setInspectingExpense(exp)}
-                          title="Inspect Details & Receipts"
-                        >
-                          <Eye size={12} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-icon-only"
-                          onClick={() => openEditModal(exp)}
-                          title="Edit Expense"
-                        >
-                          <Edit3 size={12} />
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-danger btn-icon-only"
-                          onClick={() => setDeleteConfirmId(exp.id)}
-                          title="Delete Record"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-          {processedExpenses.length > 0 && (
-            <tfoot>
-              <tr style={{ background: 'var(--bg-surface-alt)', fontWeight: 700 }}>
-                <td colSpan={7} style={{ padding: '8px 10px', textTransform: 'uppercase', fontSize: '11px' }}>
-                  Total Ledger Sum ({processedExpenses.length} Records)
-                </td>
-                <td className="table-align-right num-val" style={{ fontSize: '13px', color: 'var(--primary-navy)' }}>
-                  {formatCurrency(totalFilteredAmount)}
-                </td>
-                <td colSpan={3}></td>
-              </tr>
-            </tfoot>
-          )}
-        </table>
-      </div>
+      {/* Main Expense Table */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.cell, { width: 30, textAlign: 'center' }]}>✓</Text>
+          <Text style={[styles.cell, { flex: 1.2, fontWeight: '700' }]}>Ref #</Text>
+          <Text style={[styles.cell, { flex: 1.1, fontWeight: '700' }]}>Date</Text>
+          <Text style={[styles.cell, { flex: 3.2, fontWeight: '700' }]}>Payee / Description</Text>
+          <Text style={[styles.cell, { flex: 1.4, fontWeight: '700' }]}>Dept</Text>
+          <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Amount (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.2, fontWeight: '700' }]}>GL Code</Text>
+          <Text style={[styles.cell, { flex: 1.2, textAlign: 'center', fontWeight: '700' }]}>Status</Text>
+          <Text style={[styles.cell, { flex: 1.1, textAlign: 'center', fontWeight: '700' }]}>Action</Text>
+        </View>
+
+        {processedExpenses.map(exp => {
+          const isSelected = selectedIds.includes(exp.id);
+          return (
+            <View key={exp.id} style={[styles.tableRow, isSelected && { backgroundColor: '#f0f7ff' }]}>
+              <TouchableOpacity
+                style={{ width: 30, alignItems: 'center' }}
+                onPress={() => handleSelectOne(exp.id)}
+              >
+                <Text style={{ fontSize: 11, color: isSelected ? colors.primaryBlue : colors.textMuted }}>
+                  {isSelected ? '☑' : '☐'}
+                </Text>
+              </TouchableOpacity>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.2, color: colors.textMuted }]}>
+                {exp.referenceNumber}
+              </Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.1 }]}>{formatDate(exp.date)}</Text>
+              <View style={{ flex: 3.2 }}>
+                <Text style={[styles.cell, { fontWeight: '700', color: colors.textPrimary }]} numberOfLines={1}>
+                  {exp.description}
+                </Text>
+                {exp.gstin && (
+                  <Text style={[styles.monoText, { fontSize: 9.5, color: colors.textMuted }]}>
+                    GSTIN: {exp.gstin}
+                  </Text>
+                )}
+              </View>
+              <Text style={[styles.cell, { flex: 1.4, color: colors.textSecondary }]}>{exp.department}</Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>
+                {formatCurrency(exp.amount)}
+              </Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.2, color: colors.textMuted }]}>
+                {exp.glCode}
+              </Text>
+              <View style={{ flex: 1.2, alignItems: 'center' }}>
+                <Badge status={exp.status} size="sm" />
+              </View>
+              <View style={{ flex: 1.1, flexDirection: 'row', justifyContent: 'center', gap: 3 }}>
+                <TouchableOpacity
+                  style={styles.iconBtnSm}
+                  onPress={() => setInspectingExpense(exp)}
+                >
+                  <Eye size={11} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.iconBtnSm}
+                  onPress={() => openEditModal(exp)}
+                >
+                  <Edit3 size={11} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          );
+        })}
+
+        {/* Footer Total */}
+        <View style={[styles.tableRow, { backgroundColor: colors.bgSurfaceAlt, borderTopWidth: 1, borderTopColor: colors.borderDefault }]}>
+          <Text style={[styles.cell, { flex: 6.9, fontWeight: '700', textTransform: 'uppercase' }]}>
+            Total MTD Filtered Ledger Sum ({processedExpenses.length} Records)
+          </Text>
+          <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', fontWeight: '800', fontSize: 12.5, color: colors.primaryNavy }]}>
+            {formatCurrency(totalFilteredAmount)}
+          </Text>
+          <View style={{ flex: 2.3 }} />
+        </View>
+      </View>
 
       {/* Add / Edit Expense Modal */}
       <Modal
@@ -688,259 +416,115 @@ export const ExpenseManagement: React.FC = () => {
           setIsAddModalOpen(false);
           setEditingExpense(null);
         }}
-        title={editingExpense ? `Edit Expense: ${editingExpense.referenceNumber}` : 'Record New Operational Expense'}
-        subtitle="Record general ledger transaction with department and category allocation"
+        title={editingExpense ? `Edit Expense: ${editingExpense.referenceNumber}` : 'Record New Expense (₹ INR)'}
+        subtitle="General Ledger entry with Indian GST and category allocation"
         size="lg"
         footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => {
                 setIsAddModalOpen(false);
                 setEditingExpense(null);
               }}
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={handleSaveExpense}
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleSaveExpense}
             >
-              {editingExpense ? 'Save Changes' : 'Record Expense'}
-            </button>
-          </div>
+              <Text style={styles.primaryBtnText}>{editingExpense ? 'Save Changes' : 'Record Expense'}</Text>
+            </TouchableOpacity>
+          </View>
         }
       >
-        <form onSubmit={handleSaveExpense} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Transaction Date *</label>
-              <input
-                type="date"
-                required
-                className="form-input font-mono"
+        <View style={{ gap: 10 }}>
+          <View style={styles.formRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>Date *</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
                 value={formData.date}
-                onChange={e => setFormData({ ...formData, date: e.target.value })}
+                onChangeText={v => setFormData({ ...formData, date: v })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Employee / Officer *</label>
-              <input
-                type="text"
-                required
-                className="form-input"
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>Employee *</Text>
+              <TextInput
+                style={styles.input}
                 value={formData.employee}
-                onChange={e => setFormData({ ...formData, employee: e.target.value })}
+                onChangeText={v => setFormData({ ...formData, employee: v })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Department *</label>
-              <select
-                className="form-select"
-                value={formData.department}
-                onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
-              >
-                {departments.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-          </div>
+            </View>
+          </View>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Expense Category *</label>
-              <select
-                className="form-select"
-                value={formData.category}
-                onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
-              >
-                {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Amount (USD) *</label>
-              <input
-                type="number"
-                step="0.01"
-                required
+          <View style={styles.formRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>Amount (₹ INR) *</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
                 placeholder="0.00"
-                className="form-input font-mono"
+                keyboardType="numeric"
                 value={formData.amount}
-                onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                onChangeText={v => setFormData({ ...formData, amount: v })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tax / VAT (USD)</label>
-              <input
-                type="number"
-                step="0.01"
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>GST / Input Tax (₹)</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
                 placeholder="0.00"
-                className="form-input font-mono"
+                keyboardType="numeric"
                 value={formData.taxAmount}
-                onChange={e => setFormData({ ...formData, taxAmount: e.target.value })}
+                onChangeText={v => setFormData({ ...formData, taxAmount: v })}
               />
-            </div>
-          </div>
+            </View>
+          </View>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Payee / Description *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. AWS us-east-1 Compute Cluster"
-                className="form-input"
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
+          <View>
+            <Text style={styles.formLabel}>Payee / Description *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. AWS India Services Mumbai Cluster"
+              value={formData.description}
+              onChangeText={v => setFormData({ ...formData, description: v })}
+            />
+          </View>
+
+          <View style={styles.formRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>Vendor GSTIN</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
+                placeholder="29AABCU9603R1ZM"
+                value={formData.gstin}
+                onChangeText={v => setFormData({ ...formData, gstin: v })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Payment Method *</label>
-              <select
-                className="form-select"
-                value={formData.paymentMethod}
-                onChange={e => setFormData({ ...formData, paymentMethod: e.target.value })}
-              >
-                {paymentMethods.map(pm => (
-                  <option key={pm} value={pm}>{pm}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">General Ledger (GL) Code</label>
-              <input
-                type="text"
-                placeholder="GL-6420-SAAS"
-                className="form-input font-mono"
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>GL Account Code</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
                 value={formData.glCode}
-                onChange={e => setFormData({ ...formData, glCode: e.target.value })}
+                onChangeText={v => setFormData({ ...formData, glCode: v })}
               />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Project Code (Optional)</label>
-              <input
-                type="text"
-                placeholder="PRJ-CORE-INFRA"
-                className="form-input font-mono"
-                value={formData.projectCode}
-                onChange={e => setFormData({ ...formData, projectCode: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Approval Status *</label>
-              <select
-                className="form-select"
-                value={formData.status}
-                onChange={e => setFormData({ ...formData, status: e.target.value as ExpenseStatus })}
-              >
-                <option value="Approved">Approved</option>
-                <option value="Pending Approval">Pending Approval</option>
-                <option value="Under Review">Under Review</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-            </div>
-          </div>
+            </View>
+          </View>
 
-          <div className="form-group">
-            <label className="form-label">Receipt File Name / Identifier</label>
-            <input
-              type="text"
-              placeholder="e.g. AWS_Invoice_Aug2026.pdf"
-              className="form-input font-mono"
+          <View>
+            <Text style={styles.formLabel}>Receipt File Name</Text>
+            <TextInput
+              style={[styles.input, styles.monoText]}
+              placeholder="GST_Invoice_Attached.pdf"
               value={formData.receiptFileName}
-              onChange={e => setFormData({ ...formData, receiptFileName: e.target.value })}
+              onChangeText={v => setFormData({ ...formData, receiptFileName: v })}
             />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Operational Notes & Justification</label>
-            <textarea
-              className="form-textarea"
-              placeholder="Provide internal justification or allocation context..."
-              value={formData.notes}
-              onChange={e => setFormData({ ...formData, notes: e.target.value })}
-            />
-          </div>
-        </form>
+          </View>
+        </View>
       </Modal>
 
-      {/* Bulk Recategorize Modal */}
-      <Modal
-        isOpen={bulkCatModalOpen}
-        onClose={() => setBulkCatModalOpen(false)}
-        title="Bulk Recategorize Expenses"
-        subtitle={`Select new category for ${selectedIds.length} expense records`}
-        size="md"
-        footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn" onClick={() => setBulkCatModalOpen(false)}>Cancel</button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => {
-                bulkUpdateExpenseCategory(selectedIds, bulkTargetCat);
-                setBulkCatModalOpen(false);
-                setSelectedIds([]);
-              }}
-            >
-              Apply Category
-            </button>
-          </div>
-        }
-      >
-        <div className="form-group">
-          <label className="form-label">New Expense Category</label>
-          <select
-            className="form-select"
-            value={bulkTargetCat}
-            onChange={e => setBulkTargetCat(e.target.value as ExpenseCategory)}
-          >
-            {categories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-        </div>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={!!deleteConfirmId}
-        onClose={() => setDeleteConfirmId(null)}
-        title="Confirm Record Deletion"
-        subtitle="This action will remove the expense from the general ledger."
-        size="md"
-        footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn" onClick={() => setDeleteConfirmId(null)}>Cancel</button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={() => {
-                if (deleteConfirmId) {
-                  deleteExpense(deleteConfirmId);
-                  setDeleteConfirmId(null);
-                }
-              }}
-            >
-              Confirm Delete
-            </button>
-          </div>
-        }
-      >
-        <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-          Are you sure you want to delete this operational ledger record? An audit entry will be logged.
-        </p>
-      </Modal>
-
-      {/* Transaction Details & Audit Drawer */}
+      {/* Transaction Details & Receipts Drawer */}
       <Drawer
         isOpen={!!inspectingExpense}
         onClose={() => setInspectingExpense(null)}
@@ -948,135 +532,354 @@ export const ExpenseManagement: React.FC = () => {
         subtitle={inspectingExpense ? `${inspectingExpense.date} • ${inspectingExpense.department}` : ''}
         footer={
           inspectingExpense && (
-            <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between' }}>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => {
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+              <TouchableOpacity
+                style={styles.smBtn}
+                onPress={() => {
                   openEditModal(inspectingExpense);
                   setInspectingExpense(null);
                 }}
               >
-                <Edit3 size={12} />
-                <span>Edit Record</span>
-              </button>
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={() => setInspectingExpense(null)}
+                <Text style={styles.smBtnText}>Edit Record</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => setInspectingExpense(null)}
               >
-                Close
-              </button>
-            </div>
+                <Text style={styles.secondaryBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           )
         }
       >
         {inspectingExpense && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ padding: '12px', background: 'var(--bg-surface-alt)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Amount</div>
-                  <div className="num-val" style={{ fontSize: '20px', fontWeight: 700 }}>
-                    {formatCurrency(inspectingExpense.amount)}
-                  </div>
-                </div>
-                <Badge status={inspectingExpense.status} />
-              </div>
-            </div>
+          <View style={{ gap: 12 }}>
+            <View style={styles.drawerSummary}>
+              <Text style={{ fontSize: 10, color: colors.textMuted, textTransform: 'uppercase' }}>Amount in INR</Text>
+              <Text style={styles.drawerAmount}>{formatCurrency(inspectingExpense.amount)}</Text>
+              {inspectingExpense.taxAmount > 0 && (
+                <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+                  Includes {formatCurrency(inspectingExpense.taxAmount)} GST / Input Credit
+                </Text>
+              )}
+            </View>
 
-            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
-              <table className="erp-table compact">
-                <tbody>
-                  <tr>
-                    <td style={{ width: '120px', fontWeight: 600, color: 'var(--text-secondary)' }}>Payee / Desc</td>
-                    <td>{inspectingExpense.description}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Employee</td>
-                    <td>{inspectingExpense.employee}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Department</td>
-                    <td>{inspectingExpense.department}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Category</td>
-                    <td>{inspectingExpense.category}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Payment Method</td>
-                    <td className="font-mono">{inspectingExpense.paymentMethod}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>GL Code</td>
-                    <td className="font-mono">{inspectingExpense.glCode}</td>
-                  </tr>
-                  {inspectingExpense.projectCode && (
-                    <tr>
-                      <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Project Code</td>
-                      <td className="font-mono">{inspectingExpense.projectCode}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <View style={styles.metadataCard}>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Payee / Desc</Text>
+                <Text style={styles.metaVal}>{inspectingExpense.description}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Employee</Text>
+                <Text style={styles.metaVal}>{inspectingExpense.employee}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Department</Text>
+                <Text style={styles.metaVal}>{inspectingExpense.department}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Category</Text>
+                <Text style={styles.metaVal}>{inspectingExpense.category}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Payment Mode</Text>
+                <Text style={[styles.metaVal, styles.monoText]}>{inspectingExpense.paymentMethod}</Text>
+              </View>
+              {inspectingExpense.gstin && (
+                <View style={styles.metaRow}>
+                  <Text style={styles.metaLabel}>Vendor GSTIN</Text>
+                  <Text style={[styles.metaVal, styles.monoText]}>{inspectingExpense.gstin}</Text>
+                </View>
+              )}
+            </View>
 
-            {/* Receipt Verification */}
-            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', padding: '10px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Receipt Documentation
-              </div>
-              <div
-                style={{
-                  padding: '16px',
-                  background: 'var(--bg-surface-alt)',
-                  border: '1px dashed var(--border-default)',
-                  borderRadius: 'var(--radius-xs)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '11.5px',
-                }}
-              >
-                <FileSpreadsheet size={24} style={{ color: 'var(--text-muted)' }} />
-                <span className="font-mono">{inspectingExpense.receiptFileName || 'Receipt_Validated.pdf'}</span>
-                <span style={{ fontSize: '10.5px', color: 'var(--credit-text)', fontWeight: 600 }}>
-                  ✓ Digitally Verified & Reconciled
-                </span>
-              </div>
-            </div>
-
-            {/* Immutable Audit Log */}
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Audit History
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {inspectingExpense.auditHistory?.map((log, lIdx) => (
-                  <div
-                    key={lIdx}
-                    style={{
-                      padding: '6px 8px',
-                      background: 'var(--bg-surface-alt)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-xs)',
-                      fontSize: '11px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-                      <span className="font-mono">{log.timestamp}</span>
-                      <strong>{log.user}</strong>
-                    </div>
-                    <div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>{log.action}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+            <View style={styles.receiptBox}>
+              <FileSpreadsheet size={20} color={colors.textMuted} />
+              <Text style={[styles.monoText, { fontSize: 11 }]}>{inspectingExpense.receiptFileName || 'GST_Invoice_Validated.pdf'}</Text>
+              <Text style={{ fontSize: 10.5, color: colors.creditText, fontWeight: '700' }}>
+                ✓ Digitally Verified & Reconciled
+              </Text>
+            </View>
+          </View>
         )}
       </Drawer>
-    </div>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryNavy,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  secondaryBtnText: {
+    color: colors.textPrimary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  filterCard: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    padding: 8,
+    gap: 8,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgSurfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    height: 28,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    marginLeft: 6,
+    outlineStyle: 'none' as any,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filterChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primaryNavy,
+    borderColor: colors.primaryNavy,
+  },
+  filterChipText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: '#fff',
+  },
+  bulkBanner: {
+    padding: 8,
+    backgroundColor: '#f0f7ff',
+    borderWidth: 1,
+    borderColor: colors.infoBorder,
+    borderRadius: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  bulkText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.infoText,
+  },
+  bulkBtnSuccess: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: colors.creditBg,
+    borderWidth: 1,
+    borderColor: colors.creditBorder,
+    borderRadius: 2,
+  },
+  bulkBtnSuccessText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.creditText,
+  },
+  bulkBtnDanger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: colors.debitBg,
+    borderWidth: 1,
+    borderColor: colors.debitBorder,
+    borderRadius: 2,
+  },
+  bulkBtnDangerText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.debitText,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  iconBtnSm: {
+    padding: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  formLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 3,
+  },
+  input: {
+    height: 28,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    outlineStyle: 'none' as any,
+  },
+  drawerSummary: {
+    padding: 10,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+  },
+  drawerAmount: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Roboto Mono, monospace',
+    color: colors.textPrimary,
+  },
+  metadataCard: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    justifyContent: 'space-between',
+  },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    width: 110,
+  },
+  metaVal: {
+    fontSize: 11,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'right',
+  },
+  receiptBox: {
+    padding: 12,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderStyle: 'dashed',
+    borderRadius: 3,
+    alignItems: 'center',
+    gap: 4,
+  },
+  smBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  smBtnText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+});

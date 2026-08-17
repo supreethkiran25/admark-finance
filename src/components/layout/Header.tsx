@@ -1,14 +1,9 @@
 import React from 'react';
-import {
-  Search,
-  Sliders,
-  ShieldCheck,
-  User,
-  Activity,
-  Menu,
-} from 'lucide-react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { Search, Sliders, ShieldCheck, User, Activity, Menu } from 'lucide-react-native';
 import { useFinance } from '../../context/FinanceContext';
 import { UserRole } from '../../types/finance';
+import { colors } from '../../theme/colors';
 
 export const Header: React.FC = () => {
   const {
@@ -21,183 +16,251 @@ export const Header: React.FC = () => {
     setIsSidebarCollapsed,
   } = useFinance();
 
-  const roleDescriptions: Record<UserRole, string> = {
-    COO: 'Chief Operating Officer (Primary: Expenses, Budgets, Ops, Vendors)',
-    CEO: 'Chief Executive Officer (Complete Executive Oversight)',
-    CFO: 'Chief Financial Officer (Financial Reports, Invoices & Reconciliation)',
-    CTO: 'Chief Technology Officer (Cloud, SaaS & Tech Expenses Only)',
-  };
+  const roles: UserRole[] = ['COO', 'CEO', 'CFO', 'CTO'];
 
   return (
-    <header
-      style={{
-        height: 'var(--header-height)',
-        background: 'var(--bg-surface)',
-        borderBottom: '1px solid var(--border-default)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        zIndex: 50,
-        position: 'sticky',
-        top: 0,
-      }}
-      className="no-print"
-    >
+    <View style={styles.header}>
       {/* Left: Brand & Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <button
-          type="button"
-          className="btn btn-sm btn-icon-only"
-          onClick={() => setIsSidebarCollapsed(prev => !prev)}
-          title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      <View style={styles.leftSection}>
+        <TouchableOpacity
+          style={styles.iconBtn}
+          onPress={() => setIsSidebarCollapsed(prev => !prev)}
         >
-          <Menu size={15} />
-        </button>
+          <Menu size={16} color={colors.textPrimary} />
+        </TouchableOpacity>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div
-            style={{
-              width: '8px',
-              height: '8px',
-              backgroundColor: 'var(--credit-text)',
-              borderRadius: '1px',
-            }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span
-              style={{
-                fontSize: '12.5px',
-                fontWeight: 700,
-                letterSpacing: '0.04em',
-                color: 'var(--primary-navy)',
-                textTransform: 'uppercase',
-              }}
-            >
-              FINANCIAL OPERATIONS WORKSPACE
-            </span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-              Software Agency Operating Ledger • FY2026 Q3
-            </span>
-          </div>
-        </div>
-      </div>
+        <View style={styles.brandContainer}>
+          <View style={styles.liveIndicator} />
+          <View>
+            <Text style={styles.brandTitle}>FINANCIAL OPERATIONS WORKSPACE</Text>
+            <Text style={styles.brandSubtitle}>Indian Software Agency Operating Ledger (₹ INR) • FY26 Q2</Text>
+          </View>
+        </View>
+      </View>
 
       {/* Center: Command Palette Trigger */}
-      <div style={{ flex: 1, maxWidth: '400px', margin: '0 20px' }}>
-        <button
-          type="button"
-          onClick={() => setCommandPaletteOpen(true)}
-          style={{
-            width: '100%',
-            height: '30px',
-            background: 'var(--bg-surface-subtle)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '0 10px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            color: 'var(--text-muted)',
-            fontSize: '12px',
-            cursor: 'pointer',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Search size={13} />
-            <span>Search ledger, vendors, invoices...</span>
-          </span>
-          <kbd
-            style={{
-              fontSize: '10px',
-              fontFamily: 'var(--font-mono)',
-              border: '1px solid var(--border-default)',
-              padding: '1px 5px',
-              borderRadius: '2px',
-              background: 'var(--bg-surface)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            Ctrl+K
-          </kbd>
-        </button>
-      </div>
+      <TouchableOpacity
+        style={styles.searchBar}
+        onPress={() => setCommandPaletteOpen(true)}
+      >
+        <Search size={13} color={colors.textMuted} />
+        <Text style={styles.searchPlaceholder}>Search ledger, GSTIN, vendors, invoices... (Ctrl+K)</Text>
+        <View style={styles.kbd}>
+          <Text style={styles.kbdText}>Ctrl+K</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Right: Role Switcher & System Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <View style={styles.rightSection}>
         {/* Table Density Toggle */}
-        <button
-          type="button"
-          className="btn btn-sm"
-          onClick={() => setIsCompactMode(prev => !prev)}
-          title={`Switch to ${isCompactMode ? 'Standard' : 'Compact'} row density`}
-          style={{ height: '28px', fontSize: '11px' }}
+        <TouchableOpacity
+          style={styles.densityBtn}
+          onPress={() => setIsCompactMode(prev => !prev)}
         >
-          <Sliders size={12} />
-          <span>{isCompactMode ? 'Compact Density' : 'Standard Density'}</span>
-        </button>
+          <Sliders size={12} color={colors.textPrimary} />
+          <Text style={styles.densityText}>{isCompactMode ? 'Compact' : 'Standard'}</Text>
+        </TouchableOpacity>
 
-        {/* Sync Status Badge */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            padding: '0 6px',
-            borderRight: '1px solid var(--border-subtle)',
-          }}
-        >
-          <Activity size={12} style={{ color: 'var(--credit-text)' }} />
-          <span>SVB & Chase Live</span>
-        </div>
+        {/* Bank Connection Indicator */}
+        <View style={styles.bankStatus}>
+          <Activity size={12} color={colors.creditText} />
+          <Text style={styles.bankStatusText}>HDFC & ICICI Live</Text>
+        </View>
 
-        {/* Role Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <User size={13} style={{ color: 'var(--text-muted)' }} />
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <select
-              value={currentRole}
-              onChange={e => setCurrentRole(e.target.value as UserRole)}
-              className="form-select"
-              title={roleDescriptions[currentRole]}
-              style={{
-                height: '28px',
-                fontSize: '11.5px',
-                fontWeight: 600,
-                padding: '2px 8px',
-                borderColor: currentRole === 'CTO' ? 'var(--primary-blue)' : 'var(--border-strong)',
-                background: currentRole === 'CTO' ? 'var(--info-bg)' : 'var(--bg-surface)',
-                color: currentRole === 'CTO' ? 'var(--info-text)' : 'var(--text-primary)',
-              }}
-            >
-              <option value="COO">Role: COO (Operations & Finance)</option>
-              <option value="CEO">Role: CEO (Full Executive View)</option>
-              <option value="CFO">Role: CFO (Financials & Invoices)</option>
-              <option value="CTO">Role: CTO (Tech Expenses Only)</option>
-            </select>
-          </div>
-        </div>
+        {/* Role Selector Button Group */}
+        <View style={styles.roleGroup}>
+          <User size={12} color={colors.textMuted} />
+          {roles.map(r => {
+            const isActive = currentRole === r;
+            return (
+              <TouchableOpacity
+                key={r}
+                onPress={() => setCurrentRole(r)}
+                style={[
+                  styles.roleChip,
+                  isActive && styles.roleChipActive,
+                  r === 'CTO' && isActive && styles.roleChipCTO,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleChipText,
+                    isActive && styles.roleChipTextActive,
+                    r === 'CTO' && isActive && { color: '#fff' },
+                  ]}
+                >
+                  {r}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-        <div
-          style={{
-            padding: '3px 6px',
-            background: 'var(--bg-surface-subtle)',
-            borderRadius: 'var(--radius-xs)',
-            border: '1px solid var(--border-subtle)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-            fontSize: '11px',
-            fontWeight: 600,
-          }}
-          title="Enterprise Bank-grade Security Active"
-        >
-          <ShieldCheck size={13} style={{ color: 'var(--credit-text)' }} />
-          <span>SOC-2</span>
-        </div>
-      </div>
-    </header>
+        {/* SOC-2 Badge */}
+        <View style={styles.securityBadge}>
+          <ShieldCheck size={13} color={colors.creditText} />
+          <Text style={styles.securityBadgeText}>ISO 27001</Text>
+        </View>
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  header: {
+    height: 50,
+    backgroundColor: colors.bgSurface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    zIndex: 50,
+  },
+  leftSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  iconBtn: {
+    padding: 4,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  brandContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  liveIndicator: {
+    width: 7,
+    height: 7,
+    backgroundColor: colors.creditText,
+    borderRadius: 1,
+  },
+  brandTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.primaryNavy,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  brandSubtitle: {
+    fontSize: 9.5,
+    color: colors.textMuted,
+  },
+  searchBar: {
+    flex: 1,
+    maxWidth: 380,
+    marginHorizontal: 16,
+    height: 28,
+    backgroundColor: colors.bgSurfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  searchPlaceholder: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginLeft: 6,
+    flex: 1,
+  },
+  kbd: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 2,
+  },
+  kbdText: {
+    fontSize: 9.5,
+    fontFamily: 'Roboto Mono, monospace',
+    color: colors.textSecondary,
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  densityBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 26,
+    paddingHorizontal: 7,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+  },
+  densityText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  bankStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    borderRightWidth: 1,
+    borderRightColor: colors.borderSubtle,
+  },
+  bankStatusText: {
+    fontSize: 10.5,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+  roleGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: colors.bgSurfaceSubtle,
+    padding: 2,
+    borderRadius: 3,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  roleChip: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 2,
+  },
+  roleChipActive: {
+    backgroundColor: colors.primaryNavy,
+  },
+  roleChipCTO: {
+    backgroundColor: colors.primaryBlue,
+  },
+  roleChipText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  roleChipTextActive: {
+    color: colors.textInverse,
+  },
+  securityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    backgroundColor: colors.bgSurfaceSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  securityBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+});

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import {
   Wallet,
   ArrowUpRight,
@@ -13,7 +14,7 @@ import {
   Check,
   X,
   FileSpreadsheet,
-} from 'lucide-react';
+} from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
 import { MetricCard } from '../../common/MetricCard';
 import { Badge } from '../../common/Badge';
@@ -24,6 +25,7 @@ import { DepartmentBurnChart } from '../../charts/DepartmentBurnChart';
 import { Expense } from '../../../types/finance';
 import { formatCurrency } from '../../../utils/currency';
 import { formatDate } from '../../../utils/date';
+import { colors } from '../../../theme/colors';
 
 export const ExecutiveOverview: React.FC = () => {
   const {
@@ -44,114 +46,77 @@ export const ExecutiveOverview: React.FC = () => {
 
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
 
-  // Recent transactions
   const recentExpenses = [...filteredExpenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 8);
 
   const netCashFlow = totalMonthlyRevenue - monthSpend;
-  const burnRate = monthSpend / 16; // avg daily burn across 16 days
-  const runwayMonths = cashBalance / (monthSpend * 2); // estimated runway based on monthly run-rate
+  const runwayMonths = cashBalance / (monthSpend * 2);
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Module Title Ribbon */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <h1
-              style={{
-                fontSize: '16px',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                letterSpacing: '-0.02em',
-                textTransform: 'uppercase',
-              }}
-            >
-              Executive Financial Operations Overview
-            </h1>
-            <span
-              style={{
-                fontSize: '11px',
-                padding: '1px 6px',
-                background: 'var(--bg-surface-alt)',
-                border: '1px solid var(--border-default)',
-                borderRadius: '2px',
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 600,
-              }}
-            >
-              ACTIVE ROLE: {currentRole}
-            </span>
-          </div>
-          <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Centralized operational accounting ledger, live cash trajectory, department burn & pending payables.
-          </p>
-        </div>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title Ribbon */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.pageTitle}>Executive Financial Operations Overview</Text>
+            <View style={styles.roleTag}>
+              <Text style={styles.roleTagText}>ACTIVE ROLE: {currentRole}</Text>
+            </View>
+          </View>
+          <Text style={styles.pageSubtitle}>
+            Centralized Indian operational accounting ledger, live cash trajectory, department burn & pending payables.
+          </Text>
+        </View>
 
         {/* Quick Action Buttons */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setActiveModule('expenses')}
+        <View style={styles.actionGroup}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => setActiveModule('expenses')}
           >
-            <Plus size={13} />
-            <span>Record Expense</span>
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setActiveModule('statements')}
+            <Plus size={13} color="#fff" />
+            <Text style={styles.primaryBtnText}>Record Expense</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => setActiveModule('statements')}
           >
-            <Upload size={13} />
-            <span>Import Statement</span>
-          </button>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setActiveModule('reports')}
+            <Upload size={13} color={colors.textPrimary} />
+            <Text style={styles.secondaryBtnText}>Import Statement</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => setActiveModule('reports')}
           >
-            <FileText size={13} />
-            <span>Generate P&L</span>
-          </button>
-        </div>
-      </div>
+            <FileText size={13} color={colors.textPrimary} />
+            <Text style={styles.secondaryBtnText}>Generate P&L</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-      {/* Primary Financial Metric Ribbons (Dense 2 rows) */}
-      <div className="metric-grid">
+      {/* Metric Cards Grid */}
+      <View style={styles.metricGrid}>
         <MetricCard
           label="Operating Cash Balance"
           value={formatCurrency(cashBalance)}
-          subValue="Across SVB & Chase Checking"
+          subValue="HDFC & ICICI Commercial Accounts"
           badgeText="Verified Live"
           badgeType="credit"
-          icon={<Wallet size={15} />}
         />
         <MetricCard
-          label="Today's Approved Expenses"
+          label="Today's Approved Spend"
           value={formatCurrency(todaySpend)}
           subValue="August 16, 2026"
           badgeText="Today"
           badgeType="debit"
-          icon={<Calendar size={15} />}
         />
         <MetricCard
           label="Weekly Spend (WTD)"
           value={formatCurrency(weekSpend)}
-          subValue="Aug 10 - Aug 16"
+          subValue="10 - 16 Aug 2026"
           badgeText="7-Day Run"
           badgeType="pending"
-          icon={<ArrowDownLeft size={15} />}
         />
         <MetricCard
           label="Monthly OpEx (MTD)"
@@ -159,23 +124,20 @@ export const ExecutiveOverview: React.FC = () => {
           subValue="August 2026 Actuals"
           badgeText="OpEx"
           badgeType="debit"
-          icon={<ArrowDownLeft size={15} />}
         />
         <MetricCard
           label="Pending Payables (AP)"
           value={formatCurrency(pendingPayablesTotal)}
-          subValue="Vendor Bills Under Review"
+          subValue="Vendor Invoices Under Review"
           badgeText="Scheduled"
           badgeType="pending"
-          icon={<Building size={15} />}
         />
         <MetricCard
-          label="Employee Reimbursements"
+          label="Employee Claims Queue"
           value={formatCurrency(totalEmployeeExpenseTotal)}
-          subValue="Travel, Equipment & Stipends"
+          subValue="Travel, Stipends & Hardware"
           badgeText="FTE Claims"
           badgeType="neutral"
-          icon={<UserCheck size={15} />}
         />
         <MetricCard
           label="Vendor AP Liabilities"
@@ -183,7 +145,6 @@ export const ExecutiveOverview: React.FC = () => {
           subValue="Outstanding Net-30 Terms"
           badgeText="Committed"
           badgeType="debit"
-          icon={<Building size={15} />}
         />
         <MetricCard
           label="Net Operating Cash Flow"
@@ -191,278 +152,355 @@ export const ExecutiveOverview: React.FC = () => {
           subValue={`Runway: ~${runwayMonths.toFixed(1)} Months`}
           badgeText={netCashFlow >= 0 ? '+Positive' : '-Burn'}
           badgeType={netCashFlow >= 0 ? 'credit' : 'debit'}
-          icon={<ArrowUpRight size={15} />}
         />
-      </div>
+      </View>
 
-      {/* Main Grid: Charts & Operations */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px', marginBottom: '14px' }}>
-        <CashFlowChart />
-        <DepartmentBurnChart />
-      </div>
+      {/* Cash Flow & Department Burn */}
+      <View style={styles.twoColumnGrid}>
+        <View style={{ flex: 1.4 }}>
+          <CashFlowChart />
+        </View>
+        <View style={{ flex: 1 }}>
+          <DepartmentBurnChart />
+        </View>
+      </View>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '12px', marginBottom: '14px' }}>
-        <CategoryBreakdownChart />
+      {/* Category Breakdown & Recent Transactions */}
+      <View style={styles.twoColumnGrid}>
+        <View style={{ flex: 1 }}>
+          <CategoryBreakdownChart />
+        </View>
 
-        {/* Recent Ledger Transactions */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                Recent Operational Ledger Entries
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Latest 8 transactions across all departments
-              </div>
-            </div>
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={() => setActiveModule('expenses')}
+        <View style={[styles.card, { flex: 1.3 }]}>
+          <View style={styles.cardHeader}>
+            <View>
+              <Text style={styles.cardTitle}>Recent Operational Ledger Entries (₹)</Text>
+              <Text style={styles.cardSubtitle}>Latest 8 transactions across all departments</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.smBtn}
+              onPress={() => setActiveModule('expenses')}
             >
-              <span>View All ({filteredExpenses.length})</span>
-            </button>
-          </div>
+              <Text style={styles.smBtnText}>View All ({filteredExpenses.length})</Text>
+            </TouchableOpacity>
+          </View>
 
-          <div className="table-container">
-            <table className={`erp-table ${isCompactMode ? 'compact' : ''}`}>
-              <thead>
-                <tr>
-                  <th>Ref #</th>
-                  <th>Date</th>
-                  <th>Payee / Description</th>
-                  <th>Dept</th>
-                  <th className="table-align-right">Amount</th>
-                  <th>Status</th>
-                  <th className="table-align-center">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentExpenses.map(exp => (
-                  <tr key={exp.id}>
-                    <td className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {exp.referenceNumber}
-                    </td>
-                    <td className="font-mono">{formatDate(exp.date)}</td>
-                    <td style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{exp.description}</span>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{exp.department}</span>
-                    </td>
-                    <td className="table-align-right num-val" style={{ fontWeight: 600 }}>
-                      {formatCurrency(exp.amount)}
-                    </td>
-                    <td>
-                      <Badge status={exp.status} size="sm" />
-                    </td>
-                    <td className="table-align-center">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-icon-only"
-                          onClick={() => setSelectedExpense(exp)}
-                          title="Inspect transaction"
-                        >
-                          <Eye size={12} />
-                        </button>
-                        {exp.status === 'Pending Approval' && (
-                          <>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-success btn-icon-only"
-                              onClick={() => updateExpense(exp.id, { status: 'Approved' })}
-                              title="Approve expense"
-                            >
-                              <Check size={12} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-danger btn-icon-only"
-                              onClick={() => updateExpense(exp.id, { status: 'Rejected' })}
-                              title="Reject expense"
-                            >
-                              <X size={12} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.cell, { flex: 1.2, fontWeight: '700' }]}>Ref #</Text>
+              <Text style={[styles.cell, { flex: 1.2, fontWeight: '700' }]}>Date</Text>
+              <Text style={[styles.cell, { flex: 3, fontWeight: '700' }]}>Payee / Description</Text>
+              <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Amount (₹)</Text>
+              <Text style={[styles.cell, { flex: 1.2, fontWeight: '700', textAlign: 'center' }]}>Status</Text>
+              <Text style={[styles.cell, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>Action</Text>
+            </View>
 
-      {/* Transaction Inspection Drawer */}
+            {recentExpenses.map(exp => (
+              <View key={exp.id} style={styles.tableRow}>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.2 }]}>{exp.referenceNumber}</Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.2 }]}>{formatDate(exp.date)}</Text>
+                <Text style={[styles.cell, { flex: 3, fontWeight: '600' }]} numberOfLines={1}>
+                  {exp.description}
+                </Text>
+                <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>
+                  {formatCurrency(exp.amount)}
+                </Text>
+                <View style={{ flex: 1.2, alignItems: 'center' }}>
+                  <Badge status={exp.status} size="sm" />
+                </View>
+                <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+                  <TouchableOpacity
+                    style={styles.iconBtnSm}
+                    onPress={() => setSelectedExpense(exp)}
+                  >
+                    <Eye size={12} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* Transaction Details Drawer */}
       <Drawer
         isOpen={!!selectedExpense}
         onClose={() => setSelectedExpense(null)}
-        title={selectedExpense ? `Expense ${selectedExpense.referenceNumber}` : 'Transaction Detail'}
+        title={selectedExpense ? `Expense ${selectedExpense.referenceNumber}` : 'Detail'}
         subtitle={selectedExpense ? `${selectedExpense.date} • ${selectedExpense.department}` : ''}
         footer={
           selectedExpense && (
-            <div style={{ display: 'flex', gap: '8px', width: '100%', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
-                GL: <strong className="font-mono" style={{ marginLeft: '4px' }}>{selectedExpense.glCode}</strong>
-              </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {selectedExpense.status === 'Pending Approval' && (
-                  <button
-                    type="button"
-                    className="btn btn-success"
-                    onClick={() => {
-                      updateExpense(selectedExpense.id, { status: 'Approved' });
-                      setSelectedExpense(null);
-                    }}
-                  >
-                    <Check size={12} />
-                    <span>Approve</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={() => setSelectedExpense(null)}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+              <Text style={{ fontSize: 11, color: colors.textMuted }}>
+                GL: <Text style={{ fontFamily: 'Roboto Mono, monospace', fontWeight: '700' }}>{selectedExpense.glCode}</Text>
+              </Text>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => setSelectedExpense(null)}
+              >
+                <Text style={styles.secondaryBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
           )
         }
       >
         {selectedExpense && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Header summary */}
-            <div style={{ padding: '12px', background: 'var(--bg-surface-alt)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Amount</div>
-                  <div className="num-val" style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {formatCurrency(selectedExpense.amount)}
-                  </div>
-                  {selectedExpense.taxAmount > 0 && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      Includes {formatCurrency(selectedExpense.taxAmount)} tax/VAT
-                    </div>
-                  )}
-                </div>
-                <Badge status={selectedExpense.status} />
-              </div>
-            </div>
+          <View style={{ gap: 12 }}>
+            <View style={styles.drawerSummary}>
+              <Text style={{ fontSize: 10, color: colors.textMuted, textTransform: 'uppercase' }}>Amount in INR</Text>
+              <Text style={styles.drawerAmount}>{formatCurrency(selectedExpense.amount)}</Text>
+              {selectedExpense.taxAmount > 0 && (
+                <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>
+                  Includes {formatCurrency(selectedExpense.taxAmount)} GST / Input Credit
+                </Text>
+              )}
+            </View>
 
-            {/* Accounting Metadata Table */}
-            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', overflow: 'hidden' }}>
-              <table className="erp-table compact">
-                <tbody>
-                  <tr>
-                    <td style={{ width: '130px', fontWeight: 600, color: 'var(--text-secondary)' }}>Description</td>
-                    <td>{selectedExpense.description}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Employee / Officer</td>
-                    <td>{selectedExpense.employee}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Department</td>
-                    <td>{selectedExpense.department}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Expense Category</td>
-                    <td>{selectedExpense.category}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Payment Method</td>
-                    <td className="font-mono">{selectedExpense.paymentMethod}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>General Ledger (GL)</td>
-                    <td className="font-mono">{selectedExpense.glCode}</td>
-                  </tr>
-                  {selectedExpense.projectCode && (
-                    <tr>
-                      <td style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Project Code</td>
-                      <td className="font-mono">{selectedExpense.projectCode}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <View style={styles.metadataCard}>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Description</Text>
+                <Text style={styles.metaVal}>{selectedExpense.description}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Employee</Text>
+                <Text style={styles.metaVal}>{selectedExpense.employee}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Department</Text>
+                <Text style={styles.metaVal}>{selectedExpense.department}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Category</Text>
+                <Text style={styles.metaVal}>{selectedExpense.category}</Text>
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.metaLabel}>Payment Mode</Text>
+                <Text style={[styles.metaVal, styles.monoText]}>{selectedExpense.paymentMethod}</Text>
+              </View>
+              {selectedExpense.gstin && (
+                <View style={styles.metaRow}>
+                  <Text style={styles.metaLabel}>Vendor GSTIN</Text>
+                  <Text style={[styles.metaVal, styles.monoText]}>{selectedExpense.gstin}</Text>
+                </View>
+              )}
+            </View>
 
-            {/* Notes */}
-            {selectedExpense.notes && (
-              <div style={{ padding: '8px 10px', background: 'var(--bg-surface-subtle)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)' }}>
-                <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '2px' }}>
-                  Operational Notes & Justification
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{selectedExpense.notes}</div>
-              </div>
+            {selectedExpense.receiptFileName && (
+              <View style={styles.receiptBox}>
+                <FileSpreadsheet size={20} color={colors.textMuted} />
+                <Text style={[styles.monoText, { fontSize: 11 }]}>{selectedExpense.receiptFileName}</Text>
+                <Text style={{ fontSize: 10.5, color: colors.creditText, fontWeight: '700' }}>
+                  ✓ OCR GSTIN & Tax Verified
+                </Text>
+              </View>
             )}
-
-            {/* Receipt Preview */}
-            <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)', padding: '10px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Attached Receipt Document</span>
-                {selectedExpense.receiptFileName && (
-                  <span className="font-mono" style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
-                    {selectedExpense.receiptFileName}
-                  </span>
-                )}
-              </div>
-              <div
-                style={{
-                  padding: '16px',
-                  background: 'var(--bg-surface-alt)',
-                  border: '1px dashed var(--border-default)',
-                  borderRadius: 'var(--radius-xs)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: 'var(--text-secondary)',
-                  fontSize: '11.5px',
-                }}
-              >
-                <FileSpreadsheet size={24} style={{ color: 'var(--text-muted)' }} />
-                <span>{selectedExpense.receiptFileName || 'Digital Receipt Attachment Verified'}</span>
-                <span style={{ fontSize: '10.5px', color: 'var(--credit-text)', fontWeight: 600 }}>
-                  ✓ OCR Match Validated • Amount: {formatCurrency(selectedExpense.amount)}
-                </span>
-              </div>
-            </div>
-
-            {/* Audit Trail */}
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                Immutable Audit History
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {selectedExpense.auditHistory?.map((log, lIdx) => (
-                  <div
-                    key={lIdx}
-                    style={{
-                      padding: '6px 8px',
-                      background: 'var(--bg-surface-alt)',
-                      border: '1px solid var(--border-subtle)',
-                      borderRadius: 'var(--radius-xs)',
-                      fontSize: '11px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-                      <span className="font-mono">{log.timestamp}</span>
-                      <strong>{log.user}</strong>
-                    </div>
-                    <div style={{ color: 'var(--text-primary)', marginTop: '2px' }}>{log.action}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          </View>
         )}
       </Drawer>
-    </div>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  roleTag: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 2,
+  },
+  roleTagText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    fontFamily: 'Roboto Mono, monospace',
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  primaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryNavy,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  secondaryBtnText: {
+    color: colors.textPrimary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  metricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  twoColumnGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    flexWrap: 'wrap',
+  },
+  card: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 4,
+    padding: 12,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textPrimary,
+  },
+  cardSubtitle: {
+    fontSize: 10.5,
+    color: colors.textMuted,
+  },
+  smBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  smBtnText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  iconBtnSm: {
+    padding: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  drawerSummary: {
+    padding: 10,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+  },
+  drawerAmount: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Roboto Mono, monospace',
+    color: colors.textPrimary,
+  },
+  metadataCard: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    justifyContent: 'space-between',
+  },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    width: 110,
+  },
+  metaVal: {
+    fontSize: 11,
+    color: colors.textPrimary,
+    flex: 1,
+    textAlign: 'right',
+  },
+  receiptBox: {
+    padding: 12,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderStyle: 'dashed',
+    borderRadius: 3,
+    alignItems: 'center',
+    gap: 4,
+  },
+});

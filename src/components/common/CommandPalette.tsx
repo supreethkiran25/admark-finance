@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Modal as RNModal } from 'react-native';
 import {
   Search,
   ArrowRight,
@@ -12,10 +13,12 @@ import {
   Users,
   Sliders,
   CheckCircle,
-} from 'lucide-react';
+  X,
+} from 'lucide-react-native';
 import { useFinance } from '../../context/FinanceContext';
 import { NavigationModule } from '../../types/finance';
 import { formatCurrency } from '../../utils/currency';
+import { colors } from '../../theme/colors';
 
 export const CommandPalette: React.FC = () => {
   const {
@@ -24,16 +27,12 @@ export const CommandPalette: React.FC = () => {
     setActiveModule,
     expenses,
     vendors,
-    invoices,
     setIsCompactMode,
     isCompactMode,
   } = useFinance();
 
   const [query, setQuery] = useState('');
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Global key listener for Ctrl+K, Cmd+K, or /
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -47,26 +46,19 @@ export const CommandPalette: React.FC = () => {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen, setCommandPaletteOpen]);
-
-  useEffect(() => {
-    if (commandPaletteOpen) {
-      setQuery('');
-      setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [commandPaletteOpen]);
+  }, [commandPaletteOpen, setCommandPaletteOpen]);
 
   if (!commandPaletteOpen) return null;
 
-  // Build searchable items
   interface PaletteItem {
     id: string;
     title: string;
     subtitle?: string;
-    group: 'Navigation' | 'Actions' | 'Expenses' | 'Vendors' | 'Invoices';
+    group: 'Navigation' | 'Actions' | 'Expenses' | 'Vendors';
     icon: React.ReactNode;
     action: () => void;
   }
@@ -75,81 +67,81 @@ export const CommandPalette: React.FC = () => {
     {
       id: 'nav-overview',
       title: 'Executive Overview',
-      subtitle: 'Cash balance, operational metrics & ledger summary',
+      subtitle: 'Liquid cash reserves (₹), operational metrics & ledger',
       group: 'Navigation',
-      icon: <PieChart size={14} />,
+      icon: <PieChart size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('overview'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-expenses',
-      title: 'Expense Management',
-      subtitle: 'Expense ledger, receipts, approvals & GL allocations',
+      title: 'Expense Management (General Ledger)',
+      subtitle: 'Record expenses, receipt OCR, GST & TDS approvals',
       group: 'Navigation',
-      icon: <DollarSign size={14} />,
+      icon: <DollarSign size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('expenses'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-statements',
-      title: 'Bank Statement Import & Reconciliation',
-      subtitle: 'Parse PDF/CSV/Excel statements & match ledger records',
+      title: 'HDFC / ICICI Statements & Reconcile',
+      subtitle: 'Parse Indian bank statements and auto-reconcile',
       group: 'Navigation',
-      icon: <Layers size={14} />,
+      icon: <Layers size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('statements'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-categorization',
       title: 'Automatic Categorization Engine',
-      subtitle: 'Regex & keyword rules for automated GL coding',
+      subtitle: 'Indian software agency keyword & regex rule matching',
       group: 'Navigation',
-      icon: <Sliders size={14} />,
+      icon: <Sliders size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('categorization'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-employees',
-      title: 'Employee Reimbursements',
-      subtitle: 'Travel, client meals, internet & equipment claims',
+      title: 'Employee Reimbursements & Claims',
+      subtitle: 'IndiGo travel, WFH stipends, hardware claims queue',
       group: 'Navigation',
-      icon: <Users size={14} />,
+      icon: <Users size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('employees'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-budgets',
-      title: 'Department Budgets',
-      subtitle: 'Monthly allocated vs spent variance & utilization',
+      title: 'Department Budgets (₹ Lakhs)',
+      subtitle: 'Allocated vs spent variance & utilization alerts',
       group: 'Navigation',
-      icon: <CheckCircle size={14} />,
+      icon: <CheckCircle size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('budgets'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-vendors',
-      title: 'Vendor Management',
-      subtitle: 'Contracts, payment terms, outstanding AP balances',
+      title: 'Vendor Directory & Accounts Payable',
+      subtitle: 'AWS India, WeWork, SAM Legal, GST & TDS records',
       group: 'Navigation',
-      icon: <Building size={14} />,
+      icon: <Building size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('vendors'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-invoices',
-      title: 'Invoice Management (AP / AR)',
-      subtitle: 'Vendor bills, client billing retainers & formal invoices',
+      title: 'Invoices (GST Tax Invoices & AP)',
+      subtitle: 'Client billing retainers (AR) & formal tax invoices',
       group: 'Navigation',
-      icon: <FileText size={14} />,
+      icon: <FileText size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('invoices'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-reports',
-      title: 'Financial Reports & P&L',
-      subtitle: 'Cash position, burn rate, quarterly EBITDA & PDF exports',
+      title: 'Financial Reports & P&L (₹)',
+      subtitle: 'GAAP P&L, Daily Cash, GST 1099 and PDF export',
       group: 'Navigation',
-      icon: <FileText size={14} />,
+      icon: <FileText size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('reports'); setCommandPaletteOpen(false); },
     },
     {
       id: 'nav-security',
       title: 'Security & Audit Log',
-      subtitle: 'Immutable event trail & security checklist',
+      subtitle: '11 SOC-2 / ISO gates and immutable event trail',
       group: 'Navigation',
-      icon: <Shield size={14} />,
+      icon: <Shield size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('security'); setCommandPaletteOpen(false); },
     },
   ];
@@ -157,168 +149,158 @@ export const CommandPalette: React.FC = () => {
   const actionItems: PaletteItem[] = [
     {
       id: 'act-density',
-      title: `Toggle Table Density (${isCompactMode ? 'Currently Compact' : 'Currently Standard'})`,
-      subtitle: 'Switch between 32px compact and 40px standard row spacing',
+      title: `Toggle Row Density (${isCompactMode ? 'Compact 32px' : 'Standard 40px'})`,
+      subtitle: 'Switch between dense accounting and standard row layout',
       group: 'Actions',
-      icon: <Sliders size={14} />,
+      icon: <Sliders size={14} color={colors.primaryNavy} />,
       action: () => { setIsCompactMode(prev => !prev); setCommandPaletteOpen(false); },
     },
     {
       id: 'act-new-exp',
-      title: '+ Record New Expense',
-      subtitle: 'Add operational transaction to internal ledger',
+      title: '+ Record New Expense (₹)',
+      subtitle: 'Add transaction with GST/TDS allocation',
       group: 'Actions',
-      icon: <PlusCircle size={14} />,
+      icon: <PlusCircle size={14} color={colors.primaryNavy} />,
       action: () => { setActiveModule('expenses'); setCommandPaletteOpen(false); },
     },
-    {
-      id: 'act-import-stmt',
-      title: '+ Import Bank Statement',
-      subtitle: 'Upload CSV, Excel, or load sample Chase/SVB statement',
-      group: 'Actions',
-      icon: <PlusCircle size={14} />,
-      action: () => { setActiveModule('statements'); setCommandPaletteOpen(false); },
-    },
   ];
 
-  // Dynamic search for expenses
-  const expenseItems: PaletteItem[] = expenses
-    .filter(
-      e =>
-        e.description.toLowerCase().includes(query.toLowerCase()) ||
-        e.referenceNumber.toLowerCase().includes(query.toLowerCase()) ||
-        e.employee.toLowerCase().includes(query.toLowerCase())
-    )
-    .slice(0, 4)
-    .map(e => ({
-      id: `exp-${e.id}`,
-      title: `${e.referenceNumber}: ${e.description}`,
-      subtitle: `${e.date} • ${formatCurrency(e.amount)} • ${e.department} • ${e.status}`,
-      group: 'Expenses',
-      icon: <DollarSign size={14} />,
-      action: () => {
-        setActiveModule('expenses');
-        setCommandPaletteOpen(false);
-      },
-    }));
-
-  // Dynamic search for vendors
-  const vendorItems: PaletteItem[] = vendors
-    .filter(
-      v =>
-        v.name.toLowerCase().includes(query.toLowerCase()) ||
-        v.category.toLowerCase().includes(query.toLowerCase())
-    )
-    .slice(0, 3)
-    .map(v => ({
-      id: `vnd-${v.id}`,
-      title: `Vendor: ${v.name}`,
-      subtitle: `${v.paymentTerms} • Outstanding: ${formatCurrency(v.outstandingBalance)}`,
-      group: 'Vendors',
-      icon: <Building size={14} />,
-      action: () => {
-        setActiveModule('vendors');
-        setCommandPaletteOpen(false);
-      },
-    }));
-
-  const allFiltered: PaletteItem[] = [
+  const filteredItems = [
     ...navItems.filter(
-      i =>
-        i.title.toLowerCase().includes(query.toLowerCase()) ||
-        (i.subtitle && i.subtitle.toLowerCase().includes(query.toLowerCase()))
+      i => i.title.toLowerCase().includes(query.toLowerCase()) || (i.subtitle && i.subtitle.toLowerCase().includes(query.toLowerCase()))
     ),
     ...actionItems.filter(
-      i =>
-        i.title.toLowerCase().includes(query.toLowerCase()) ||
-        (i.subtitle && i.subtitle.toLowerCase().includes(query.toLowerCase()))
+      i => i.title.toLowerCase().includes(query.toLowerCase()) || (i.subtitle && i.subtitle.toLowerCase().includes(query.toLowerCase()))
     ),
-    ...(query.length > 1 ? expenseItems : []),
-    ...(query.length > 1 ? vendorItems : []),
   ];
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelectedIndex(prev => (prev < allFiltered.length - 1 ? prev + 1 : 0));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelectedIndex(prev => (prev > 0 ? prev - 1 : allFiltered.length - 1));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (allFiltered[selectedIndex]) {
-        allFiltered[selectedIndex].action();
-      }
-    }
-  };
-
   return (
-    <div className="command-palette-backdrop" onClick={() => setCommandPaletteOpen(false)}>
-      <div className="command-palette-box" onClick={e => e.stopPropagation()}>
-        <div className="command-search-bar">
-          <Search size={16} style={{ color: 'var(--text-muted)' }} />
-          <input
-            ref={inputRef}
-            type="text"
-            className="command-input"
-            placeholder="Search operational modules, transactions, vendors, actions... (ESC to close)"
-            value={query}
-            onChange={e => {
-              setQuery(e.target.value);
-              setSelectedIndex(0);
-            }}
-            onKeyDown={handleKeyDown}
-          />
-          <kbd
-            style={{
-              fontSize: '10px',
-              fontFamily: 'var(--font-mono)',
-              border: '1px solid var(--border-default)',
-              padding: '2px 5px',
-              borderRadius: '2px',
-              color: 'var(--text-muted)',
-              background: 'var(--bg-surface-alt)',
-            }}
-          >
-            ESC
-          </kbd>
-        </div>
+    <RNModal
+      visible={commandPaletteOpen}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setCommandPaletteOpen(false)}
+    >
+      <TouchableOpacity
+        style={styles.overlay}
+        activeOpacity={1}
+        onPress={() => setCommandPaletteOpen(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.box}
+          onPress={e => e.stopPropagation()}
+        >
+          <View style={styles.searchBar}>
+            <Search size={15} color={colors.textMuted} />
+            <TextInput
+              style={styles.input}
+              placeholder="Search Indian financial operations, modules, ledger... (ESC to close)"
+              placeholderTextColor={colors.textMuted}
+              value={query}
+              onChangeText={setQuery}
+              autoFocus
+            />
+            <TouchableOpacity onPress={() => setCommandPaletteOpen(false)}>
+              <X size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
 
-        <div className="command-results-list">
-          {allFiltered.length === 0 ? (
-            <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-              No operational records or commands matching "{query}"
-            </div>
-          ) : (
-            allFiltered.map((item, index) => (
-              <div
+          <ScrollView style={{ maxHeight: 360 }}>
+            {filteredItems.map(item => (
+              <TouchableOpacity
                 key={item.id}
-                className={`command-item ${index === selectedIndex ? 'selected' : ''}`}
-                onClick={item.action}
-                onMouseEnter={() => setSelectedIndex(index)}
+                style={styles.item}
+                onPress={item.action}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{item.icon}</span>
-                  <div>
-                    <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.title}</div>
-                    {item.subtitle && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {item.subtitle}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="command-item-badge">{item.group}</span>
-                  {index === selectedIndex && (
-                    <ArrowRight size={12} style={{ color: 'var(--text-muted)' }} />
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </div>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  {item.icon}
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemTitle}>{item.title}</Text>
+                    {item.subtitle && <Text style={styles.itemSubtitle}>{item.subtitle}</Text>}
+                  </View>
+                </View>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.group}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </RNModal>
   );
 };
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    paddingTop: '8%',
+  },
+  box: {
+    width: '92%',
+    maxWidth: 580,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderStrong,
+    borderRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  searchBar: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.bgSurface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontFamily: 'Public Sans, sans-serif',
+    outlineStyle: 'none' as any,
+  },
+  item: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  itemTitle: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  itemSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  badge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 2,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  badgeText: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontWeight: '600',
+  },
+});

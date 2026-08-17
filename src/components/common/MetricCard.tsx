@@ -1,12 +1,13 @@
 import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../../theme/colors';
 
 interface MetricCardProps {
   label: string;
-  value: string | number;
+  value: string;
   subValue?: string;
   badgeText?: string;
   badgeType?: 'credit' | 'debit' | 'pending' | 'neutral';
-  icon?: React.ReactNode;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -15,50 +16,92 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   subValue,
   badgeText,
   badgeType = 'neutral',
-  icon,
 }) => {
-  let badgeColorClass = 'color: var(--text-muted); background: var(--bg-surface-alt);';
+  let badgeBg = colors.bgSurfaceAlt;
+  let badgeColor = colors.textMuted;
+  let badgeBorder = colors.borderSubtle;
+
   if (badgeType === 'credit') {
-    badgeColorClass = 'color: var(--credit-text); background: var(--credit-bg); border: 1px solid var(--credit-border);';
+    badgeBg = colors.creditBg;
+    badgeColor = colors.creditText;
+    badgeBorder = colors.creditBorder;
   } else if (badgeType === 'debit') {
-    badgeColorClass = 'color: var(--debit-text); background: var(--debit-bg); border: 1px solid var(--debit-border);';
+    badgeBg = colors.debitBg;
+    badgeColor = colors.debitText;
+    badgeBorder = colors.debitBorder;
   } else if (badgeType === 'pending') {
-    badgeColorClass = 'color: var(--pending-text); background: var(--pending-bg); border: 1px solid var(--pending-border);';
+    badgeBg = colors.pendingBg;
+    badgeColor = colors.pendingText;
+    badgeBorder = colors.pendingBorder;
   }
 
   return (
-    <div className="metric-card">
-      <div className="metric-label">
-        <span>{label}</span>
-        {icon && <span style={{ color: 'var(--text-subtle)' }}>{icon}</span>}
-      </div>
-      <div className="metric-value">{value}</div>
-      <div className="metric-sub">
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <Text style={styles.label}>{label}</Text>
+      </View>
+      <Text style={styles.value}>{value}</Text>
+      <View style={styles.subContainer}>
         {badgeText && (
-          <span
-            style={{
-              padding: '1px 5px',
-              borderRadius: '2px',
-              fontSize: '10px',
-              fontWeight: 600,
-              fontFamily: 'var(--font-mono)',
-              ...Object.fromEntries(
-                badgeColorClass
-                  .split(';')
-                  .filter(Boolean)
-                  .map(s => {
-                    const [k, v] = s.split(':');
-                    const camelK = k.trim().replace(/-([a-z])/g, g => g[1].toUpperCase());
-                    return [camelK, v.trim()];
-                  })
-              ),
-            }}
-          >
-            {badgeText}
-          </span>
+          <View style={[styles.badge, { backgroundColor: badgeBg, borderColor: badgeBorder }]}>
+            <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeText}</Text>
+          </View>
         )}
-        {subValue && <span>{subValue}</span>}
-      </div>
-    </div>
+        {subValue && <Text style={styles.subText}>{subValue}</Text>}
+      </View>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    padding: 10,
+    flex: 1,
+    minWidth: 180,
+    justifyContent: 'space-between',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  value: {
+    fontSize: 17,
+    fontWeight: '700',
+    fontFamily: 'Roboto Mono, monospace',
+    color: colors.textPrimary,
+    marginVertical: 4,
+    fontVariant: ['tabular-nums'],
+  },
+  subContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  badge: {
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 2,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    fontFamily: 'Roboto Mono, monospace',
+  },
+  subText: {
+    fontSize: 10.5,
+    color: colors.textMuted,
+  },
+});

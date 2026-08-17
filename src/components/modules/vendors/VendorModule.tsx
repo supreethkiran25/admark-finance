@@ -1,574 +1,458 @@
 import React, { useState } from 'react';
-import {
-  Building2,
-  Plus,
-  Search,
-  Filter,
-  CreditCard,
-  CheckCircle2,
-  AlertTriangle,
-  FileText,
-  Calendar,
-  ExternalLink,
-  Edit3,
-} from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { Building2, Search, Plus, CheckCircle, ExternalLink } from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
 import { Vendor, ExpenseCategory, Department } from '../../../types/finance';
 import { Badge } from '../../common/Badge';
 import { Modal } from '../../common/Modal';
 import { formatCurrency } from '../../../utils/currency';
-import { formatDate } from '../../../utils/date';
+import { colors } from '../../../theme/colors';
 
 export const VendorModule: React.FC = () => {
-  const { vendors, addVendor, updateVendor, recordVendorPayment, isCompactMode } = useFinance();
+  const { vendors, addVendor, payVendor } = useFinance();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDept, setSelectedDept] = useState('ALL');
-  const [selectedCat, setSelectedCat] = useState('ALL');
-
-  // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [payingVendor, setPayingVendor] = useState<Vendor | null>(null);
-  const [paymentAmountInput, setPaymentAmountInput] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState('');
 
-  // Form State
   const initialForm = {
     name: '',
-    category: 'Software subscriptions' as ExpenseCategory,
+    category: 'Cloud services' as ExpenseCategory,
     department: 'Engineering' as Department,
     contactEmail: '',
-    paymentTerms: 'Net 30' as Vendor['paymentTerms'],
-    outstandingBalance: '0.00',
-    contractRenewalDate: '2027-01-01',
-    taxId: 'XX-XXX0000',
-    w9OnFile: true,
-    status: 'Active' as Vendor['status'],
-    paymentMethod: 'ACH Wire Transfer',
+    paymentTerms: 'Net 30' as 'Net 15' | 'Net 30' | 'Net 60' | 'Monthly Auto-Debit' | 'Due on Receipt',
+    outstandingBalance: '',
+    contractRenewalDate: '2027-01-15',
+    gstin: '29AABCU9603R1ZM',
+    pan: 'AABCU9603R',
+    tdsApplicable: true,
+    tdsRate: 10,
+    msmeRegistered: false,
+    paymentMethod: 'Corporate Card - HDFC 4821',
   };
   const [formData, setFormData] = useState(initialForm);
 
-  const departments: Department[] = [
-    'Engineering',
-    'Sales & Marketing',
-    'Operations',
-    'Executive',
-    'Design & Product',
-    'Facilities & IT',
-  ];
-
-  const categories: ExpenseCategory[] = [
-    'Salaries',
-    'Office expenses',
-    'Software subscriptions',
-    'Cloud services',
-    'Travel',
-    'Food',
-    'Marketing',
-    'Equipment',
-    'Utilities',
-    'Miscellaneous',
-  ];
-
-  const termsOptions = ['Net 15', 'Net 30', 'Net 60', 'Monthly Auto-Debit', 'Due on Receipt'] as const;
-
   const filteredVendors = vendors.filter(v => {
-    if (selectedDept !== 'ALL' && v.department !== selectedDept) return false;
-    if (selectedCat !== 'ALL' && v.category !== selectedCat) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        v.name.toLowerCase().includes(q) ||
-        v.contactEmail.toLowerCase().includes(q) ||
-        v.taxId.toLowerCase().includes(q)
-      );
-    }
-    return true;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      v.name.toLowerCase().includes(q) ||
+      v.gstin.toLowerCase().includes(q) ||
+      v.pan.toLowerCase().includes(q) ||
+      v.category.toLowerCase().includes(q)
+    );
   });
 
-  const totalOutstanding = vendors.reduce((s, v) => s + v.outstandingBalance, 0);
-  const totalYtdSpend = vendors.reduce((s, v) => s + v.totalYtdSpend, 0);
+  const totalOutstanding = vendors.reduce((sum, v) => sum + v.outstandingBalance, 0);
+  const totalYtd = vendors.reduce((sum, v) => sum + v.totalYtdSpend, 0);
 
-  const openPayModal = (v: Vendor) => {
-    setPayingVendor(v);
-    setPaymentAmountInput(v.outstandingBalance.toString());
-  };
-
-  const handleExecutePayment = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePayVendorSubmit = () => {
     if (!payingVendor) return;
-    const parsed = parseFloat(paymentAmountInput);
+    const parsed = parseFloat(paymentAmount);
     if (isNaN(parsed) || parsed <= 0) {
-      alert('Please enter a valid payment amount.');
+      alert('Please enter a valid disbursement amount in INR (₹).');
       return;
     }
-
-    recordVendorPayment(payingVendor.id, parsed);
+    payVendor(payingVendor.id, parsed);
     setPayingVendor(null);
+    setPaymentAmount('');
   };
 
-  const handleSaveVendor = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateVendor = () => {
     if (!formData.name.trim()) {
-      alert('Please provide a vendor name.');
+      alert('Please enter vendor name.');
       return;
     }
-
-    const parsedBalance = parseFloat(formData.outstandingBalance) || 0;
-
-    if (editingVendor) {
-      updateVendor(editingVendor.id, {
-        name: formData.name,
-        category: formData.category,
-        department: formData.department,
-        contactEmail: formData.contactEmail,
-        paymentTerms: formData.paymentTerms,
-        outstandingBalance: parsedBalance,
-        contractRenewalDate: formData.contractRenewalDate,
-        taxId: formData.taxId,
-        w9OnFile: formData.w9OnFile,
-        status: formData.status,
-        paymentMethod: formData.paymentMethod,
-      });
-      setEditingVendor(null);
-    } else {
-      addVendor({
-        name: formData.name,
-        category: formData.category,
-        department: formData.department,
-        contactEmail: formData.contactEmail,
-        paymentTerms: formData.paymentTerms,
-        outstandingBalance: parsedBalance,
-        contractRenewalDate: formData.contractRenewalDate,
-        taxId: formData.taxId,
-        w9OnFile: formData.w9OnFile,
-        status: formData.status,
-        paymentMethod: formData.paymentMethod,
-      });
-      setIsAddModalOpen(false);
-    }
-
+    addVendor({
+      name: formData.name,
+      category: formData.category,
+      department: formData.department,
+      contactEmail: formData.contactEmail || 'billing@vendor.internal',
+      paymentTerms: formData.paymentTerms,
+      outstandingBalance: parseFloat(formData.outstandingBalance) || 0,
+      contractRenewalDate: formData.contractRenewalDate,
+      gstin: formData.gstin,
+      pan: formData.pan,
+      tdsApplicable: formData.tdsApplicable,
+      tdsRate: formData.tdsRate,
+      msmeRegistered: formData.msmeRegistered,
+      w9OnFile: true,
+      status: 'Active',
+      paymentMethod: formData.paymentMethod,
+    });
+    setIsAddModalOpen(false);
     setFormData(initialForm);
   };
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em',
-            }}
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title Ribbon */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <Text style={styles.pageTitle}>Vendor Management & Accounts Payable (AP) (₹)</Text>
+          <Text style={styles.pageSubtitle}>
+            Commercial contracts, GSTIN / PAN records, Section 194J/194C TDS tracking, and Net-30 AP settlements.
+          </Text>
+        </View>
+
+        <View style={styles.actionGroup}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => setIsAddModalOpen(true)}
           >
-            Vendor Directory & Accounts Payable (AP)
-          </h1>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Active commercial suppliers, contract renewals, payment terms, W-9 compliance, and AP disbursement settlements.
-          </p>
-        </div>
+            <Plus size={13} color="#fff" />
+            <Text style={styles.primaryBtnText}>+ Add Vendor</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => {
-            setFormData(initialForm);
-            setIsAddModalOpen(true);
-          }}
-        >
-          <Plus size={13} />
-          <span>+ Add Vendor</span>
-        </button>
-      </div>
-
-      {/* Aggregate Overview Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '14px' }}>
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Active Commercial Vendors
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-navy)', marginTop: '4px' }}>
-            {vendors.length} Active Accounts
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            W-9 Compliant & Monitored
-          </div>
-        </div>
-
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--debit-text)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Outstanding AP Balance
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--debit-text)', marginTop: '4px' }}>
+      {/* KPI Ribbon */}
+      <View style={styles.kpiStrip}>
+        <View>
+          <Text style={styles.kpiLabel}>Total AP Liabilities Outstanding (₹)</Text>
+          <Text style={[styles.kpiVal, styles.monoText, { color: colors.debitText }]}>
             {formatCurrency(totalOutstanding)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Payables across Net-15 / Net-30
-          </div>
-        </div>
+          </Text>
+        </View>
+        <View>
+          <Text style={styles.kpiLabel}>Total YTD Spend (₹)</Text>
+          <Text style={[styles.kpiVal, styles.monoText]}>{formatCurrency(totalYtd)}</Text>
+        </View>
+        <View>
+          <Text style={styles.kpiLabel}>Active Commercial Vendors</Text>
+          <Text style={[styles.kpiVal, styles.monoText]}>{vendors.length} Contractors & SaaS</Text>
+        </View>
+      </View>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Total YTD Cumulative Spend
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-navy)', marginTop: '4px' }}>
-            {formatCurrency(totalYtdSpend)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            FY2026 Vendor Disbursements
-          </div>
-        </div>
-      </div>
+      {/* Search Bar */}
+      <View style={styles.searchBar}>
+        <Search size={14} color={colors.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search vendor name, GSTIN, PAN, category..."
+          placeholderTextColor={colors.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
 
-      {/* Filter Ribbon */}
-      <div
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '8px 12px',
-          marginBottom: '12px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '8px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '260px', flex: 1 }}>
-          <Search size={14} style={{ color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Search vendor name, email, or tax ID..."
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            style={{ height: '28px' }}
-          />
-        </div>
+      {/* Vendor Table */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.cell, { flex: 3.2, fontWeight: '700' }]}>Vendor / Supplier Name</Text>
+          <Text style={[styles.cell, { flex: 2, fontWeight: '700' }]}>Category / Dept</Text>
+          <Text style={[styles.cell, { flex: 2, fontWeight: '700' }]}>GSTIN / PAN</Text>
+          <Text style={[styles.cell, { flex: 1.6, fontWeight: '700' }]}>Payment Terms</Text>
+          <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Outstanding (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>YTD Spend (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.4, textAlign: 'center', fontWeight: '700' }]}>AP Settlement</Text>
+        </View>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Dept:</span>
-            <select
-              className="form-select"
-              style={{ width: '130px', height: '28px', fontSize: '11px' }}
-              value={selectedDept}
-              onChange={e => setSelectedDept(e.target.value)}
+        {filteredVendors.map(v => (
+          <View key={v.id} style={styles.tableRow}>
+            <View style={{ flex: 3.2 }}>
+              <Text style={[styles.cell, { fontWeight: '700' }]}>{v.name}</Text>
+              <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{v.contactEmail}</Text>
+            </View>
+            <View style={{ flex: 2 }}>
+              <Text style={[styles.cell, { fontWeight: '600' }]}>{v.category}</Text>
+              <Text style={{ fontSize: 9.5, color: colors.textMuted }}>{v.department}</Text>
+            </View>
+            <View style={{ flex: 2 }}>
+              <Text style={[styles.cell, styles.monoText, { fontSize: 10 }]}>{v.gstin}</Text>
+              <Text style={[styles.monoText, { fontSize: 9.5, color: colors.textMuted }]}>
+                PAN: {v.pan} {v.tdsApplicable ? `• TDS ${v.tdsRate}%` : ''}
+              </Text>
+            </View>
+            <View style={{ flex: 1.6 }}>
+              <Text style={[styles.cell]}>{v.paymentTerms}</Text>
+              <Text style={{ fontSize: 9.5, color: colors.textMuted }}>Ren: {v.contractRenewalDate}</Text>
+            </View>
+            <Text
+              style={[
+                styles.cell,
+                styles.monoText,
+                { flex: 1.8, textAlign: 'right', fontWeight: '700', color: v.outstandingBalance > 0 ? colors.debitText : colors.textMuted },
+              ]}
             >
-              <option value="ALL">All Departments</option>
-              {departments.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
+              {formatCurrency(v.outstandingBalance)}
+            </Text>
+            <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right' }]}>
+              {formatCurrency(v.totalYtdSpend)}
+            </Text>
+            <View style={{ flex: 1.4, flexDirection: 'row', justifyContent: 'center' }}>
+              {v.outstandingBalance > 0 ? (
+                <TouchableOpacity
+                  style={styles.payBtn}
+                  onPress={() => {
+                    setPayingVendor(v);
+                    setPaymentAmount(v.outstandingBalance.toString());
+                  }}
+                >
+                  <Text style={styles.payBtnText}>Pay Bill</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={{ fontSize: 10.5, color: colors.creditText, fontWeight: '700' }}>✓ Settled</Text>
+              )}
+            </View>
+          </View>
+        ))}
+      </View>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)' }}>Category:</span>
-            <select
-              className="form-select"
-              style={{ width: '140px', height: '28px', fontSize: '11px' }}
-              value={selectedCat}
-              onChange={e => setSelectedCat(e.target.value)}
-            >
-              <option value="ALL">All Categories</option>
-              {categories.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Vendors Table */}
-      <div className="table-container">
-        <table className={`erp-table ${isCompactMode ? 'compact' : ''}`}>
-          <thead>
-            <tr>
-              <th>Vendor Name</th>
-              <th>Category</th>
-              <th>Department</th>
-              <th>Payment Terms</th>
-              <th>Contact Email</th>
-              <th>Tax ID / W-9</th>
-              <th className="table-align-right">Outstanding (AP)</th>
-              <th className="table-align-right">YTD Spend</th>
-              <th>Renewal Date</th>
-              <th>Status</th>
-              <th className="table-align-center" style={{ width: '140px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredVendors.map(vendor => (
-              <tr key={vendor.id}>
-                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                  {vendor.name}
-                </td>
-                <td>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      padding: '1px 5px',
-                      background: 'var(--bg-surface-subtle)',
-                      borderRadius: '2px',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    {vendor.category}
-                  </span>
-                </td>
-                <td>
-                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{vendor.department}</span>
-                </td>
-                <td className="font-mono" style={{ fontSize: '11px' }}>
-                  {vendor.paymentTerms}
-                </td>
-                <td className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  {vendor.contactEmail}
-                </td>
-                <td>
-                  <span style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span className="font-mono">{vendor.taxId}</span>
-                    {vendor.w9OnFile && <CheckCircle2 size={11} style={{ color: 'var(--credit-text)' }} />}
-                  </span>
-                </td>
-                <td className="table-align-right num-val" style={{ fontWeight: 600, color: vendor.outstandingBalance > 0 ? 'var(--debit-text)' : 'var(--text-muted)' }}>
-                  {formatCurrency(vendor.outstandingBalance)}
-                </td>
-                <td className="table-align-right num-val">
-                  {formatCurrency(vendor.totalYtdSpend)}
-                </td>
-                <td className="font-mono" style={{ fontSize: '11px' }}>
-                  {formatDate(vendor.contractRenewalDate)}
-                </td>
-                <td>
-                  <Badge status={vendor.status} size="sm" />
-                </td>
-                <td className="table-align-center">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                    {vendor.outstandingBalance > 0 ? (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-primary"
-                        onClick={() => openPayModal(vendor)}
-                        style={{ fontSize: '10.5px', height: '22px', padding: '1px 6px' }}
-                      >
-                        <CreditCard size={11} />
-                        <span>Pay AP</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-icon-only"
-                        onClick={() => {
-                          setEditingVendor(vendor);
-                          setFormData({
-                            name: vendor.name,
-                            category: vendor.category,
-                            department: vendor.department,
-                            contactEmail: vendor.contactEmail,
-                            paymentTerms: vendor.paymentTerms,
-                            outstandingBalance: vendor.outstandingBalance.toString(),
-                            contractRenewalDate: vendor.contractRenewalDate,
-                            taxId: vendor.taxId,
-                            w9OnFile: vendor.w9OnFile,
-                            status: vendor.status,
-                            paymentMethod: vendor.paymentMethod,
-                          });
-                        }}
-                        title="Edit Vendor Profile"
-                      >
-                        <Edit3 size={11} />
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pay Vendor AP Modal */}
+      {/* Pay Vendor Modal */}
       <Modal
         isOpen={!!payingVendor}
         onClose={() => setPayingVendor(null)}
-        title={payingVendor ? `Disburse Payment: ${payingVendor.name}` : 'Vendor Payment'}
-        subtitle="Executes payment clearing and records debit entry in operational ledger"
+        title={`Disburse AP Payment: ${payingVendor?.name}`}
+        subtitle="Settle outstanding vendor liabilities via HDFC / ICICI direct RTGS"
         size="md"
         footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn" onClick={() => setPayingVendor(null)}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={handleExecutePayment}>
-              Authorize Disbursement
-            </button>
-          </div>
-        }
-      >
-        {payingVendor && (
-          <form onSubmit={handleExecutePayment} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ padding: '10px 12px', background: 'var(--bg-surface-alt)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-xs)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Payment Method:</span>
-                <strong>{payingVendor.paymentMethod}</strong>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginTop: '4px' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Payment Terms:</span>
-                <strong>{payingVendor.paymentTerms}</strong>
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">Payment Amount (USD) *</label>
-              <input
-                type="number"
-                step="0.01"
-                required
-                className="form-input font-mono"
-                value={paymentAmountInput}
-                onChange={e => setPaymentAmountInput(e.target.value)}
-              />
-            </div>
-          </form>
-        )}
-      </Modal>
-
-      {/* Add / Edit Vendor Modal */}
-      <Modal
-        isOpen={isAddModalOpen || !!editingVendor}
-        onClose={() => {
-          setIsAddModalOpen(false);
-          setEditingVendor(null);
-        }}
-        title={editingVendor ? `Edit Vendor: ${editingVendor.name}` : 'Register New Vendor Account'}
-        subtitle="Manage commercial agreement, contact, terms, and tax records"
-        size="lg"
-        footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => {
-                setIsAddModalOpen(false);
-                setEditingVendor(null);
-              }}
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => setPayingVendor(null)}
             >
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleSaveVendor}>
-              {editingVendor ? 'Save Profile' : 'Register Vendor'}
-            </button>
-          </div>
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handlePayVendorSubmit}
+            >
+              <Text style={styles.primaryBtnText}>Execute Payment (₹)</Text>
+            </TouchableOpacity>
+          </View>
         }
       >
-        <form onSubmit={handleSaveVendor} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Vendor Company Name *</label>
-              <input
-                type="text"
-                required
-                className="form-input"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Contact / AR Email *</label>
-              <input
-                type="email"
-                required
-                className="form-input font-mono"
-                value={formData.contactEmail}
-                onChange={e => setFormData({ ...formData, contactEmail: e.target.value })}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Category *</label>
-              <select
-                className="form-select"
-                value={formData.category}
-                onChange={e => setFormData({ ...formData, category: e.target.value as ExpenseCategory })}
-              >
-                {categories.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Department *</label>
-              <select
-                className="form-select"
-                value={formData.department}
-                onChange={e => setFormData({ ...formData, department: e.target.value as Department })}
-              >
-                {departments.map(d => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Payment Terms *</label>
-              <select
-                className="form-select"
-                value={formData.paymentTerms}
-                onChange={e => setFormData({ ...formData, paymentTerms: e.target.value as Vendor['paymentTerms'] })}
-              >
-                {termsOptions.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-            <div className="form-group">
-              <label className="form-label">Outstanding AP (USD)</label>
-              <input
-                type="number"
-                step="0.01"
-                className="form-input font-mono"
-                value={formData.outstandingBalance}
-                onChange={e => setFormData({ ...formData, outstandingBalance: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Contract Renewal Date</label>
-              <input
-                type="date"
-                className="form-input font-mono"
-                value={formData.contractRenewalDate}
-                onChange={e => setFormData({ ...formData, contractRenewalDate: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Tax ID / EIN</label>
-              <input
-                type="text"
-                className="form-input font-mono"
-                value={formData.taxId}
-                onChange={e => setFormData({ ...formData, taxId: e.target.value })}
-              />
-            </div>
-          </div>
-        </form>
+        <View style={{ gap: 10 }}>
+          <View>
+            <Text style={styles.formLabel}>Payment Amount (₹ INR) *</Text>
+            <TextInput
+              style={[styles.input, styles.monoText]}
+              value={paymentAmount}
+              keyboardType="numeric"
+              onChangeText={setPaymentAmount}
+            />
+          </View>
+          <View>
+            <Text style={styles.formLabel}>Disbursement Channel</Text>
+            <TextInput
+              style={styles.input}
+              value={payingVendor?.paymentMethod}
+              editable={false}
+            />
+          </View>
+        </View>
       </Modal>
-    </div>
+
+      {/* Add Vendor Modal */}
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title="Add Commercial Vendor / Contractor"
+        subtitle="Register vendor with Indian GSTIN, PAN, and TDS rate"
+        size="md"
+        footer={
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => setIsAddModalOpen(false)}
+            >
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleCreateVendor}
+            >
+              <Text style={styles.primaryBtnText}>Save Vendor</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      >
+        <View style={{ gap: 10 }}>
+          <View>
+            <Text style={styles.formLabel}>Vendor Legal Name *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Amazon Web Services India Pvt Ltd"
+              value={formData.name}
+              onChangeText={v => setFormData({ ...formData, name: v })}
+            />
+          </View>
+          <View style={styles.formRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>GSTIN *</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
+                placeholder="29AABCU9603R1ZM"
+                value={formData.gstin}
+                onChangeText={v => setFormData({ ...formData, gstin: v })}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.formLabel}>PAN *</Text>
+              <TextInput
+                style={[styles.input, styles.monoText]}
+                placeholder="AABCU9603R"
+                value={formData.pan}
+                onChangeText={v => setFormData({ ...formData, pan: v })}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  primaryBtn: {
+    backgroundColor: colors.primaryNavy,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  secondaryBtnText: {
+    color: colors.textPrimary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  kpiStrip: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 4,
+    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  kpiLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  kpiVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    height: 28,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    marginLeft: 6,
+    outlineStyle: 'none' as any,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  payBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: colors.primaryNavy,
+    borderRadius: 2,
+  },
+  payBtnText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  formLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 3,
+  },
+  input: {
+    height: 28,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    outlineStyle: 'none' as any,
+  },
+});

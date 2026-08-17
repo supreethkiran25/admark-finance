@@ -1,11 +1,13 @@
 import React from 'react';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { FinanceProvider, useFinance } from './context/FinanceContext';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { CommandPalette } from './components/common/CommandPalette';
 import { ToastContainer } from './components/common/ToastContainer';
+import { colors } from './theme/colors';
 
-// Modules
+// Enterprise Accounting Modules in React Native
 import { ExecutiveOverview } from './components/modules/overview/ExecutiveOverview';
 import { ExpenseManagement } from './components/modules/expenses/ExpenseManagement';
 import { BankStatementModule } from './components/modules/statements/BankStatementModule';
@@ -51,25 +53,19 @@ const WorkspaceShell: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: 'var(--bg-app)' }}>
-      <Header />
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <Sidebar />
-        <main
-          style={{
-            flex: 1,
-            minWidth: 0,
-            overflowY: 'auto',
-            height: 'calc(100vh - var(--header-height))',
-            background: 'var(--bg-app)',
-          }}
-        >
-          {renderActiveModule()}
-        </main>
-      </div>
-      <CommandPalette />
-      <ToastContainer />
-    </div>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Header />
+        <View style={styles.contentRow}>
+          <Sidebar />
+          <View style={styles.mainContent}>
+            {renderActiveModule()}
+          </View>
+        </View>
+        <CommandPalette />
+        <ToastContainer />
+      </View>
+    </SafeAreaView>
   );
 };
 
@@ -80,5 +76,32 @@ export function App() {
     </FinanceProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+    height: '100%',
+    width: '100%',
+  },
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+    height: '100%',
+    backgroundColor: colors.bgApp,
+  },
+  contentRow: {
+    flex: 1,
+    flexDirection: 'row',
+    height: '100%',
+    overflow: 'hidden',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+    height: '100%',
+    overflow: 'hidden',
+  },
+});
 
 export default App;

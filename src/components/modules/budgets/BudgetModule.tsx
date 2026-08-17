@@ -1,301 +1,322 @@
 import React, { useState } from 'react';
-import {
-  PieChart,
-  Sliders,
-  AlertTriangle,
-  CheckCircle2,
-  TrendingUp,
-  Edit3,
-  Building,
-  Info,
-} from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { Edit3, CheckCircle, AlertTriangle, AlertCircle } from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
-import { DepartmentBudget, Department } from '../../../types/finance';
+import { DepartmentBudget } from '../../../types/finance';
 import { Modal } from '../../common/Modal';
 import { formatCurrency } from '../../../utils/currency';
-import { formatDate } from '../../../utils/date';
+import { colors } from '../../../theme/colors';
 
 export const BudgetModule: React.FC = () => {
-  const { budgets, updateBudget, isCompactMode, currentRole } = useFinance();
+  const { budgets, updateBudget } = useFinance();
 
   const [editingBudget, setEditingBudget] = useState<DepartmentBudget | null>(null);
-  const [allocatedInput, setAllocatedInput] = useState<string>('');
-  const [notesInput, setNotesInput] = useState<string>('');
+  const [allocatedInput, setAllocatedInput] = useState('');
+  const [notesInput, setNotesInput] = useState('');
 
-  const totalAllocated = budgets.reduce((s, b) => s + b.allocatedBudget, 0);
-  const totalSpent = budgets.reduce((s, b) => s + b.spentAmount, 0);
-  const totalCommitted = budgets.reduce((s, b) => s + b.committedAmount, 0);
+  const totalAllocated = budgets.reduce((sum, b) => sum + b.allocatedBudget, 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + b.spentAmount, 0);
+  const totalCommitted = budgets.reduce((sum, b) => sum + b.committedAmount, 0);
   const totalRemaining = totalAllocated - (totalSpent + totalCommitted);
-  const overallUtilization = (totalSpent / totalAllocated) * 100;
 
-  const openAdjustModal = (b: DepartmentBudget) => {
-    setEditingBudget(b);
-    setAllocatedInput(b.allocatedBudget.toString());
-    setNotesInput(b.notes || '');
-  };
-
-  const handleSaveBudget = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveBudget = () => {
     if (!editingBudget) return;
-    const parsed = parseFloat(allocatedInput);
-    if (isNaN(parsed) || parsed <= 0) {
-      alert('Please enter a valid allocation amount.');
+    const parsedAllocated = parseFloat(allocatedInput);
+    if (isNaN(parsedAllocated) || parsedAllocated <= 0) {
+      alert('Please enter a valid budget allocation in INR (₹).');
       return;
     }
 
-    updateBudget(editingBudget.id, parsed, notesInput);
+    updateBudget(editingBudget.id, parsedAllocated, notesInput);
     setEditingBudget(null);
   };
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Department Budget Management & Variance Analysis
-          </h1>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Fiscal monthly departmental budget caps, real-time burn velocity tracking, and variance thresholds.
-          </p>
-        </div>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title Ribbon */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <Text style={styles.pageTitle}>Department Budget Allocation & Variance (INR - ₹)</Text>
+          <Text style={styles.pageSubtitle}>
+            Monthly department caps (in ₹ Lakhs), actual disbursements, committed liabilities, and variance thresholds.
+          </Text>
+        </View>
+      </View>
 
-        <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-          FISCAL PERIOD: AUGUST 2026 (MTD)
-        </div>
-      </div>
-
-      {/* Aggregate Overview Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px', marginBottom: '14px' }}>
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Total Allocated Budget
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-navy)', marginTop: '4px' }}>
-            {formatCurrency(totalAllocated)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Across 6 Agency Departments
-          </div>
-        </div>
-
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Actual Spent MTD
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--debit-text)', marginTop: '4px' }}>
+      {/* Summary KPI Strip */}
+      <View style={styles.kpiStrip}>
+        <View>
+          <Text style={styles.kpiLabel}>Total Monthly Allocation (₹)</Text>
+          <Text style={[styles.kpiVal, styles.monoText]}>{formatCurrency(totalAllocated)}</Text>
+        </View>
+        <View>
+          <Text style={styles.kpiLabel}>Total MTD Spent (₹)</Text>
+          <Text style={[styles.kpiVal, styles.monoText, { color: colors.debitText }]}>
             {formatCurrency(totalSpent)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            {overallUtilization.toFixed(1)}% of aggregate cap
-          </div>
-        </div>
-
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Committed / Pending AP
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--pending-text)', marginTop: '4px' }}>
+          </Text>
+        </View>
+        <View>
+          <Text style={styles.kpiLabel}>Committed AP & POs (₹)</Text>
+          <Text style={[styles.kpiVal, styles.monoText, { color: colors.pendingText }]}>
             {formatCurrency(totalCommitted)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Scheduled invoices & claims
-          </div>
-        </div>
-
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Remaining Headroom
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: totalRemaining >= 0 ? 'var(--credit-text)' : 'var(--debit-text)', marginTop: '4px' }}>
+          </Text>
+        </View>
+        <View>
+          <Text style={styles.kpiLabel}>Remaining Headroom</Text>
+          <Text style={[styles.kpiVal, styles.monoText, { color: colors.creditText, fontWeight: '800' }]}>
             {formatCurrency(totalRemaining)}
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Remaining for August 17-31
-          </div>
-        </div>
-      </div>
+          </Text>
+        </View>
+      </View>
 
-      {/* Department Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+      {/* Budgets Table */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.cell, { flex: 2, fontWeight: '700' }]}>Department</Text>
+          <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Allocated (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Spent (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.6, textAlign: 'right', fontWeight: '700' }]}>Committed (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>Remaining (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.4, textAlign: 'center', fontWeight: '700' }]}>Util %</Text>
+          <Text style={[styles.cell, { flex: 1, textAlign: 'center', fontWeight: '700' }]}>Edit</Text>
+        </View>
+
         {budgets.map(b => {
           const totalUtil = b.spentAmount + b.committedAmount;
           const pct = (totalUtil / b.allocatedBudget) * 100;
           const rem = b.allocatedBudget - totalUtil;
 
-          let statusBadge = { bg: 'var(--credit-bg)', text: 'var(--credit-text)', border: 'var(--credit-border)', label: 'Normal' };
-          if (pct >= 100) {
-            statusBadge = { bg: 'var(--debit-bg)', text: 'var(--debit-text)', border: 'var(--debit-border)', label: 'Over Budget' };
-          } else if (pct >= 85) {
-            statusBadge = { bg: 'var(--pending-bg)', text: 'var(--pending-text)', border: 'var(--pending-border)', label: 'Near Capacity (85%+)' };
-          }
+          let statusColor = colors.creditText;
+          if (pct >= 100) statusColor = colors.debitText;
+          else if (pct >= 85) statusColor = colors.pendingText;
 
           return (
-            <div
-              key={b.id}
-              style={{
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-default)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '12px 14px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Building size={14} style={{ color: 'var(--text-muted)' }} />
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                      {b.department}
-                    </span>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '10.5px',
-                      fontWeight: 600,
-                      padding: '1px 6px',
-                      background: statusBadge.bg,
-                      color: statusBadge.text,
-                      border: `1px solid ${statusBadge.border}`,
-                      borderRadius: '2px',
-                    }}
-                  >
-                    {statusBadge.label}
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', margin: '10px 0' }}>
-                  <div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Allocated</div>
-                    <div className="num-val" style={{ fontSize: '15px', fontWeight: 700 }}>
-                      {formatCurrency(b.allocatedBudget)}
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Spent + Committed</div>
-                    <div className="num-val" style={{ fontSize: '15px', fontWeight: 700 }}>
-                      {formatCurrency(totalUtil)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div style={{ margin: '8px 0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Utilization:</span>
-                    <strong className="num-val" style={{ color: statusBadge.text }}>{pct.toFixed(1)}%</strong>
-                  </div>
-                  <div
-                    style={{
-                      height: '7px',
-                      background: 'var(--bg-surface-subtle)',
-                      borderRadius: '2px',
-                      overflow: 'hidden',
-                      border: '1px solid var(--border-subtle)',
-                    }}
-                  >
-                    <div
-                      style={{
-                        height: '100%',
-                        width: `${Math.min(100, pct)}%`,
-                        background: statusBadge.text,
-                      }}
-                    />
-                  </div>
-                </div>
-
+            <View key={b.id} style={styles.tableRow}>
+              <View style={{ flex: 2 }}>
+                <Text style={[styles.cell, { fontWeight: '700' }]}>{b.department}</Text>
                 {b.notes && (
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.35 }}>
+                  <Text style={{ fontSize: 9.5, color: colors.textMuted }} numberOfLines={1}>
                     {b.notes}
-                  </div>
+                  </Text>
                 )}
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px', marginTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Remaining: <strong className="num-val" style={{ color: rem < 0 ? 'var(--debit-text)' : 'inherit' }}>{formatCurrency(rem)}</strong>
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-sm"
-                  onClick={() => openAdjustModal(b)}
+              </View>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', fontWeight: '700' }]}>
+                {formatCurrency(b.allocatedBudget)}
+              </Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.8, textAlign: 'right', color: colors.debitText }]}>
+                {formatCurrency(b.spentAmount)}
+              </Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.6, textAlign: 'right', color: colors.pendingText }]}>
+                {formatCurrency(b.committedAmount)}
+              </Text>
+              <Text
+                style={[
+                  styles.cell,
+                  styles.monoText,
+                  { flex: 1.8, textAlign: 'right', fontWeight: '700', color: rem < 0 ? colors.debitText : colors.creditText },
+                ]}
+              >
+                {formatCurrency(rem)}
+              </Text>
+              <View style={{ flex: 1.4, alignItems: 'center' }}>
+                <View style={[styles.pctBadge, { borderColor: colors.borderSubtle }]}>
+                  <Text style={[styles.pctText, { color: statusColor }]}>{pct.toFixed(1)}%</Text>
+                </View>
+              </View>
+              <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'center' }}>
+                <TouchableOpacity
+                  style={styles.iconBtnSm}
+                  onPress={() => {
+                    setEditingBudget(b);
+                    setAllocatedInput(b.allocatedBudget.toString());
+                    setNotesInput(b.notes || '');
+                  }}
                 >
-                  <Edit3 size={11} />
-                  <span>Adjust Budget</span>
-                </button>
-              </div>
-            </div>
+                  <Edit3 size={11} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+            </View>
           );
         })}
-      </div>
+      </View>
 
-      {/* Adjust Budget Modal */}
+      {/* Edit Budget Modal */}
       <Modal
         isOpen={!!editingBudget}
         onClose={() => setEditingBudget(null)}
-        title={editingBudget ? `Adjust Budget: ${editingBudget.department}` : 'Budget Allocation'}
-        subtitle="Modify departmental fiscal cap and add justification note"
+        title={`Adjust Budget: ${editingBudget?.department}`}
+        subtitle="Modify monthly departmental cap in INR (₹)"
         size="md"
         footer={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button type="button" className="btn" onClick={() => setEditingBudget(null)}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={handleSaveBudget}>Save Allocation</button>
-          </div>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => setEditingBudget(null)}
+            >
+              <Text style={styles.secondaryBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleSaveBudget}
+            >
+              <Text style={styles.primaryBtnText}>Save Allocation</Text>
+            </TouchableOpacity>
+          </View>
         }
       >
-        <form onSubmit={handleSaveBudget} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div className="form-group">
-            <label className="form-label">Department</label>
-            <input
-              type="text"
-              disabled
-              className="form-input font-mono"
-              value={editingBudget?.department || ''}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Allocated Monthly Budget (USD) *</label>
-            <input
-              type="number"
-              step="500"
-              required
-              className="form-input font-mono"
+        <View style={{ gap: 10 }}>
+          <View>
+            <Text style={styles.formLabel}>Monthly Allocated Budget (₹ INR) *</Text>
+            <TextInput
+              style={[styles.input, styles.monoText]}
               value={allocatedInput}
-              onChange={e => setAllocatedInput(e.target.value)}
+              keyboardType="numeric"
+              onChangeText={setAllocatedInput}
             />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Operational Notes & Justification</label>
-            <textarea
-              className="form-textarea"
-              placeholder="Explain rationale for budget increase/decrease..."
+          </View>
+          <View>
+            <Text style={styles.formLabel}>Budget Justification Notes</Text>
+            <TextInput
+              style={styles.input}
               value={notesInput}
-              onChange={e => setNotesInput(e.target.value)}
+              onChangeText={setNotesInput}
             />
-          </div>
-        </form>
+          </View>
+        </View>
       </Modal>
-    </div>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  kpiStrip: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 4,
+    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  kpiLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+  },
+  kpiVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+  pctBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderRadius: 2,
+  },
+  pctText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    fontFamily: 'Roboto Mono, monospace',
+  },
+  iconBtnSm: {
+    padding: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+  },
+  primaryBtn: {
+    backgroundColor: colors.primaryNavy,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 3,
+  },
+  secondaryBtnText: {
+    color: colors.textPrimary,
+    fontSize: 11.5,
+    fontWeight: '600',
+  },
+  formLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+    marginBottom: 3,
+  },
+  input: {
+    height: 28,
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 3,
+    paddingHorizontal: 8,
+    fontSize: 11.5,
+    color: colors.textPrimary,
+    outlineStyle: 'none' as any,
+  },
+});

@@ -1,259 +1,268 @@
 import React, { useState } from 'react';
-import {
-  BarChart3,
-  TrendingUp,
-  PieChart,
-  ShieldAlert,
-  Building,
-  Users,
-  Wallet,
-  ArrowDownLeft,
-  ArrowUpRight,
-} from 'lucide-react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { BarChart3, TrendingUp, AlertTriangle, ShieldCheck } from 'lucide-react-native';
 import { useFinance } from '../../../context/FinanceContext';
-import { formatCurrency } from '../../../utils/currency';
-import { CashFlowChart } from '../../charts/CashFlowChart';
-import { CategoryBreakdownChart } from '../../charts/CategoryBreakdownChart';
-import { DepartmentBurnChart } from '../../charts/DepartmentBurnChart';
+import { MetricCard } from '../../common/MetricCard';
+import { formatCurrency, formatPercent } from '../../../utils/currency';
+import { colors } from '../../../theme/colors';
 
 export const AnalyticsModule: React.FC = () => {
-  const { expenses, vendors, budgets, claims, cashBalance, monthSpend, totalMonthlyRevenue } = useFinance();
+  const { cashBalance, monthSpend, totalMonthlyRevenue, vendors } = useFinance();
 
-  // Runway scenario simulation
-  const [scenarioMonthlySpend, setScenarioMonthlySpend] = useState<number>(monthSpend * 1.5);
-  const [scenarioRevenueGrowth, setScenarioRevenueGrowth] = useState<number>(0);
+  // Scenario Simulator
+  const [simSpend, setSimSpend] = useState(monthSpend);
+  const [simRevChange, setSimRevChange] = useState(0); // % change
 
-  const calculatedScenarioRunway = (cashBalance / Math.max(1000, scenarioMonthlySpend - (totalMonthlyRevenue * (1 + scenarioRevenueGrowth / 100)))).toFixed(1);
+  const simulatedRevenue = totalMonthlyRevenue * (1 + simRevChange / 100);
+  const simulatedNetBurn = simSpend - simulatedRevenue;
+  const simulatedRunway = simulatedNetBurn > 0 ? (cashBalance / simulatedNetBurn) : 999;
 
-  // Vendor Concentration
+  // Vendor Concentration Risk
   const topVendors = [...vendors]
-    .sort((a, b) => (b.totalYtdSpend + b.outstandingBalance) - (a.totalYtdSpend + a.outstandingBalance))
-    .slice(0, 6);
-
-  const totalVendorSpendCombined = topVendors.reduce((s, v) => s + v.totalYtdSpend + v.outstandingBalance, 0);
-
-  // Employee Spend Distribution
-  const employeeSpendMap: Record<string, number> = {};
-  claims.forEach(c => {
-    employeeSpendMap[c.employeeName] = (employeeSpendMap[c.employeeName] || 0) + c.amount;
-  });
-
-  const employeeSpendList = Object.entries(employeeSpendMap)
-    .map(([name, amount]) => ({ name, amount }))
-    .sort((a, b) => b.amount - a.amount);
+    .sort((a, b) => b.totalYtdSpend - a.totalYtdSpend)
+    .slice(0, 5);
+  const totalVendorYtd = vendors.reduce((sum, v) => sum + v.totalYtdSpend, 0);
 
   return (
-    <div style={{ padding: '16px', maxWidth: '1600px', margin: '0 auto' }}>
-      {/* Header Bar */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '14px',
-          paddingBottom: '10px',
-          borderBottom: '1px solid var(--border-default)',
-        }}
-      >
-        <div>
-          <h1
-            style={{
-              fontSize: '15px',
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              textTransform: 'uppercase',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Financial Analytics & Runway Intelligence
-          </h1>
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Operational spend distribution, vendor concentration risk, department burn velocity, and scenario modeling.
-          </p>
-        </div>
-      </div>
+    <ScrollView style={styles.container} contentContainerStyle={{ padding: 14, gap: 12 }}>
+      {/* Title Ribbon */}
+      <View style={styles.titleRibbon}>
+        <View>
+          <Text style={styles.pageTitle}>Financial Analytics & Scenario Runway Simulator (₹)</Text>
+          <Text style={styles.pageSubtitle}>
+            OpEx vs CapEx ratio, vendor concentration risk, and interactive scenario forecasting in Indian Rupees.
+          </Text>
+        </View>
+      </View>
 
-      {/* Metric Strips */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px', marginBottom: '14px' }}>
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Gross Operating Margin
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--credit-text)', marginTop: '4px' }}>
-            +{(((totalMonthlyRevenue - monthSpend) / totalMonthlyRevenue) * 100).toFixed(1)}%
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Net: {formatCurrency(totalMonthlyRevenue - monthSpend, { showSign: true })}
-          </div>
-        </div>
+      {/* KPI Cards */}
+      <View style={styles.kpiGrid}>
+        <MetricCard
+          label="OpEx vs CapEx Ratio"
+          value="97.6% / 2.4%"
+          subValue="CapEx: ₹3.50 L hardware"
+          badgeText="Asset Mix"
+          badgeType="neutral"
+        />
+        <MetricCard
+          label="Gross Operating Margin"
+          value="+38.6%"
+          subValue="Revenue vs Direct Delivery"
+          badgeText="Healthy"
+          badgeType="credit"
+        />
+        <MetricCard
+          label="Average Daily Burn Rate"
+          value={formatCurrency(monthSpend / 16)}
+          subValue="Per Operating Day"
+          badgeText="Daily Burn"
+          badgeType="debit"
+        />
+        <MetricCard
+          label="Runway Headroom"
+          value={`${simulatedRunway > 50 ? '50+' : simulatedRunway.toFixed(1)} Months`}
+          subValue={`Reserves: ${formatCurrency(cashBalance, { compact: true })}`}
+          badgeText="Solvent"
+          badgeType="credit"
+        />
+      </View>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Average Daily Burn
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--debit-text)', marginTop: '4px' }}>
-            {formatCurrency(monthSpend / 16)} / day
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Based on 16 days MTD run-rate
-          </div>
-        </div>
+      {/* Interactive Runway Scenario Simulator */}
+      <View style={styles.simulatorCard}>
+        <View style={styles.simHeader}>
+          <Text style={styles.simTitle}>Interactive Scenario Modeling & Runway Forecaster</Text>
+          <Text style={styles.simSubtitle}>Simulate spend contraction or client revenue shocks</Text>
+        </View>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            CapEx vs OpEx Ratio
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-navy)', marginTop: '4px' }}>
-            2.1% CapEx / 97.9% OpEx
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            Software agency lean asset model
-          </div>
-        </div>
+        <View style={styles.simRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.simLabel}>Simulated Monthly Spend (₹): {formatCurrency(simSpend)}</Text>
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setSimSpend(Math.max(500000, simSpend - 200000))}>
+                <Text style={styles.stepBtnText}>-₹2 Lakhs</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setSimSpend(monthSpend)}>
+                <Text style={styles.stepBtnText}>Reset Actual</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setSimSpend(simSpend + 200000)}>
+                <Text style={styles.stepBtnText}>+₹2 Lakhs</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '10px 12px' }}>
-          <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
-            Current Reserve Runway
-          </div>
-          <div className="num-val" style={{ fontSize: '18px', fontWeight: 700, color: 'var(--credit-text)', marginTop: '4px' }}>
-            ~6.6 Months
-          </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            $1.42M Liquid Treasury
-          </div>
-        </div>
-      </div>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.simLabel}>Client Revenue Variance: {simRevChange >= 0 ? `+${simRevChange}%` : `${simRevChange}%`}</Text>
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setSimRevChange(prev => Math.max(-50, prev - 10))}>
+                <Text style={styles.stepBtnText}>-10% Shock</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setSimRevChange(0)}>
+                <Text style={styles.stepBtnText}>Baseline</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => setSimRevChange(prev => Math.min(50, prev + 10))}>
+                <Text style={styles.stepBtnText}>+10% Growth</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
 
-      {/* Charts Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px', marginBottom: '14px' }}>
-        <CashFlowChart />
-        <DepartmentBurnChart />
-      </div>
+        <View style={styles.simResultBox}>
+          <Text style={styles.simResultText}>
+            Projected Monthly Cash Flow:{' '}
+            <Text style={{ fontWeight: '800', fontFamily: 'Roboto Mono, monospace', color: (simulatedRevenue - simSpend) >= 0 ? colors.creditText : colors.debitText }}>
+              {formatCurrency(simulatedRevenue - simSpend, { showSign: true })}
+            </Text>
+            {' • '}
+            Runway Under Scenario:{' '}
+            <Text style={{ fontWeight: '800', fontFamily: 'Roboto Mono, monospace' }}>
+              {simulatedRunway > 50 ? '50+ Months (Self-Sustaining)' : `${simulatedRunway.toFixed(1)} Months`}
+            </Text>
+          </Text>
+        </View>
+      </View>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px', marginBottom: '14px' }}>
-        <CategoryBreakdownChart />
-
-        {/* Vendor Concentration Risk Table */}
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', padding: '12px 14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
-                Vendor Concentration & Exposure Risk
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Top 6 suppliers ranked by annual commitment
-              </div>
-            </div>
-          </div>
-
-          <div className="table-container">
-            <table className="erp-table compact">
-              <thead>
-                <tr>
-                  <th>Vendor</th>
-                  <th>Category</th>
-                  <th className="table-align-right">Cumulative Value</th>
-                  <th className="table-align-right">% Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topVendors.map(v => {
-                  const val = v.totalYtdSpend + v.outstandingBalance;
-                  const pct = totalVendorSpendCombined > 0 ? (val / totalVendorSpendCombined) * 100 : 0;
-                  return (
-                    <tr key={v.id}>
-                      <td style={{ fontWeight: 600 }}>{v.name}</td>
-                      <td>{v.category}</td>
-                      <td className="table-align-right num-val">{formatCurrency(val)}</td>
-                      <td className="table-align-right font-mono">{pct.toFixed(1)}%</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Runway Scenario Simulator */}
-      <div
-        style={{
-          background: 'var(--bg-surface)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-sm)',
-          padding: '14px 16px',
-        }}
-      >
-        <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '4px' }}>
-          Interactive Runway & Cash Exhaustion Scenario Modeling
-        </div>
-        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-          Simulate operational stress tests by adjusting monthly burn rate and projected client revenue growth.
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', alignItems: 'center' }}>
-          <div>
-            <label className="form-label">Simulated Monthly OpEx ($)</label>
-            <input
-              type="range"
-              min="150000"
-              max="450000"
-              step="10000"
-              value={scenarioMonthlySpend}
-              onChange={e => setScenarioMonthlySpend(parseFloat(e.target.value))}
-              style={{ width: '100%', marginTop: '6px' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '2px' }}>
-              <span>$150k</span>
-              <strong className="num-val">{formatCurrency(scenarioMonthlySpend)} / mo</strong>
-              <span>$450k</span>
-            </div>
-          </div>
-
-          <div>
-            <label className="form-label">Client Revenue Variance (%)</label>
-            <input
-              type="range"
-              min="-50"
-              max="50"
-              step="5"
-              value={scenarioRevenueGrowth}
-              onChange={e => setScenarioRevenueGrowth(parseFloat(e.target.value))}
-              style={{ width: '100%', marginTop: '6px' }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '2px' }}>
-              <span>-50% (Loss)</span>
-              <strong className="num-val">{scenarioRevenueGrowth >= 0 ? `+${scenarioRevenueGrowth}%` : `${scenarioRevenueGrowth}%`}</strong>
-              <span>+50% (Growth)</span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              padding: '12px',
-              background: 'var(--bg-surface-alt)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: 'var(--radius-xs)',
-              textAlign: 'center',
-            }}
-          >
-            <div style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Projected Runway Outcome
-            </div>
-            <div
-              className="num-val"
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: parseFloat(calculatedScenarioRunway) < 4 ? 'var(--debit-text)' : 'var(--credit-text)',
-                marginTop: '2px',
-              }}
-            >
-              {parseFloat(calculatedScenarioRunway) > 36 ? '36+ Months (Self-Sustaining)' : `${calculatedScenarioRunway} Months`}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Vendor Concentration Risk Table */}
+      <View style={styles.table}>
+        <View style={[styles.tableRow, styles.tableHeader]}>
+          <Text style={[styles.cell, { flex: 3.5, fontWeight: '700' }]}>Top Supplier / Vendor</Text>
+          <Text style={[styles.cell, { flex: 2, fontWeight: '700' }]}>Category</Text>
+          <Text style={[styles.cell, { flex: 2, textAlign: 'right', fontWeight: '700' }]}>YTD Spend (₹)</Text>
+          <Text style={[styles.cell, { flex: 1.5, textAlign: 'right', fontWeight: '700' }]}>% Concentration</Text>
+        </View>
+        {topVendors.map(v => {
+          const concPct = totalVendorYtd > 0 ? (v.totalYtdSpend / totalVendorYtd) * 100 : 0;
+          return (
+            <View key={v.id} style={styles.tableRow}>
+              <Text style={[styles.cell, { flex: 3.5, fontWeight: '700' }]}>{v.name}</Text>
+              <Text style={[styles.cell, { flex: 2, color: colors.textSecondary }]}>{v.category}</Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 2, textAlign: 'right', fontWeight: '700' }]}>
+                {formatCurrency(v.totalYtdSpend)}
+              </Text>
+              <Text style={[styles.cell, styles.monoText, { flex: 1.5, textAlign: 'right' }]}>
+                {concPct.toFixed(1)}%
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </ScrollView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.bgApp,
+  },
+  titleRibbon: {
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  pageTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    textTransform: 'uppercase',
+  },
+  pageSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  kpiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  simulatorCard: {
+    backgroundColor: colors.bgSurface,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 4,
+    padding: 12,
+    gap: 10,
+  },
+  simHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+    paddingBottom: 6,
+  },
+  simTitle: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.textPrimary,
+  },
+  simSubtitle: {
+    fontSize: 10.5,
+    color: colors.textMuted,
+  },
+  simRow: {
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  simLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stepBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderDefault,
+    borderRadius: 2,
+  },
+  stepBtnText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  simResultBox: {
+    padding: 8,
+    backgroundColor: colors.bgSurfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 2,
+  },
+  simResultText: {
+    fontSize: 11.5,
+    color: colors.textPrimary,
+  },
+  table: {
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: 3,
+    backgroundColor: colors.bgSurface,
+    overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
+  },
+  tableHeader: {
+    backgroundColor: colors.bgSurfaceAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderDefault,
+  },
+  cell: {
+    fontSize: 11,
+    color: colors.textPrimary,
+  },
+  monoText: {
+    fontFamily: 'Roboto Mono, monospace',
+    fontVariant: ['tabular-nums'],
+  },
+});
