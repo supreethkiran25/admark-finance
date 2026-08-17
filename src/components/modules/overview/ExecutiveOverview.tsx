@@ -48,7 +48,7 @@ export const ExecutiveOverview: React.FC = () => {
 
   const recentExpenses = [...filteredExpenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 8);
+    .slice(0, 3);
 
   const netCashFlow = totalMonthlyRevenue - monthSpend;
   const runwayMonths = cashBalance / (monthSpend * 2);
@@ -100,7 +100,7 @@ export const ExecutiveOverview: React.FC = () => {
         <MetricCard
           label="Operating Cash Balance"
           value={formatCurrency(cashBalance)}
-          subValue="HDFC & ICICI Commercial Accounts"
+          subValue="HDFC Commercial Treasury"
           badgeText="Verified Live"
           badgeType="credit"
         />
@@ -135,7 +135,7 @@ export const ExecutiveOverview: React.FC = () => {
         <MetricCard
           label="Employee Claims Queue"
           value={formatCurrency(totalEmployeeExpenseTotal)}
-          subValue="Travel, Stipends & Hardware"
+          subValue="Travel & Hardware Claims"
           badgeText="FTE Claims"
           badgeType="neutral"
         />
@@ -175,7 +175,7 @@ export const ExecutiveOverview: React.FC = () => {
           <View style={styles.cardHeader}>
             <View>
               <Text style={styles.cardTitle}>Recent Operational Ledger Entries (₹)</Text>
-              <Text style={styles.cardSubtitle}>Latest 8 transactions across all departments</Text>
+              <Text style={styles.cardSubtitle}>Latest 3 client demonstration transactions</Text>
             </View>
             <TouchableOpacity
               style={styles.smBtn}

@@ -124,7 +124,7 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'OPERATIONS_FINANCE_ERP_STATE_V1';
+const STORAGE_KEY = 'OPERATIONS_FINANCE_ERP_STATE_V3';
 
 export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load from local storage or defaults
